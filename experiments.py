@@ -260,15 +260,15 @@ def load_embeddings(file):
 def main(args):
     # nx_G = read_graph(file=args.input, get_connected_graph=False, remove_selfloops=True)
     # print(nx_G.number_of_nodes(), nx_G.number_of_edges())
-    train_pos = pickle.load(open('C:/Users/sotir/PycharmProjects/node2vec_average_embeddings/isa-undirected-dataset'
+    train_pos = pickle.load(open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
                                  '-train-test-splits/isa_train_pos.p', 'rb'))
-    test_pos = pickle.load(open('C:/Users/sotir/PycharmProjects/node2vec_average_embeddings/isa-undirected-dataset'
+    test_pos = pickle.load(open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
                                 '-train-test-splits/isa_test_pos.p', 'rb'))
     train_neg = pickle.load(
-        open('C:/Users/sotir/PycharmProjects/node2vec_average_embeddings/isa-undirected-dataset'
+        open('C:/home/paperspace/sotiris/thesis/isa-undirected-dataset'
              '-train-test-splits/isa_train_neg.p', 'rb'))
     test_neg = pickle.load(
-        open('C:/Users/sotir/PycharmProjects/node2vec_average_embeddings/isa-undirected-dataset'
+        open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
              '-train-test-splits/isa_test_neg.p', 'rb'))
     # train_pos, train_neg, test_pos, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
     # train_neg, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
@@ -277,8 +277,7 @@ def main(args):
     print('Number of positive testing samples: ', len(test_pos))
     print('Number of negative testing samples: ', len(test_neg))
     train_graph = read_graph(
-        file='C:/Users/sotir/Documents/UMLS-node2vec/umls-node2vec/code/python/pytorch-node2vec-umls-relations'
-             '/isa_undirected/isa-undirected-dataset-train-test-splits/isa_train_graph_undirected.edgelist',
+        file='/home/paperspace/sotiris/thesis/isa-undirected-dataset-train-test-splits/isa_train_graph_undirected.edgelist',
         get_connected_graph=False, remove_selfloops=False)
     print(
         'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
