@@ -15,8 +15,7 @@ data_index = 0
 
 class Utils(object):
     def __init__(self, walks, window_size):
-        self.phrase_dic = pickle.load(open('C:/Users/sotir/PycharmProjects/node2vec_average_embeddings'
-                                           '/relation_utilities/isa/isa_reversed_dic.p', 'rb'))
+        self.phrase_dic = pickle.load(open('/home/paperspace/sotiris/thesis/relation_utilities/isa/isa_reversed_dic.p', 'rb'))
         self.stop = True
         self.window_size = window_size
         self.walks = walks
