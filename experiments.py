@@ -265,7 +265,7 @@ def main(args):
     test_pos = pickle.load(open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
                                 '-train-test-splits/isa_test_pos.p', 'rb'))
     train_neg = pickle.load(
-        open('C:/home/paperspace/sotiris/thesis/isa-undirected-dataset'
+        open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
              '-train-test-splits/isa_train_neg.p', 'rb'))
     test_neg = pickle.load(
         open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
