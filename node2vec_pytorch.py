@@ -45,8 +45,8 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        self.odir_checkpoint = 'C:/Users/sotir/PycharmProjects/node2vec_average_embeddings/checkpoints/'
-        self.odir_embeddings = 'C:/Users/sotir/PycharmProjects/node2vec_average_embeddings/embeddings/'
+        self.odir_checkpoint = '/home/paperspace/sotiris/thesis/'
+        self.odir_embeddings = '/home/paperspace/sotiris/thesis/'
         self.output_file = output_file
         self.wv = {}
 
