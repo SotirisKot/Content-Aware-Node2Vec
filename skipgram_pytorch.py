@@ -24,6 +24,7 @@ class SkipGram(nn.Module):
         pos_u_average = []
         for phrase_idxs in pos_u:
             embed_u = self.u_embeddings(phrase_idxs)
+            print(type(embed_u))
             embed = embed_u[0]
             for i in embed_u[1:]:
                 embed = embed + i
