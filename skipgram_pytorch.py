@@ -29,24 +29,27 @@ class SkipGram(nn.Module):
             embed_u = self.u_embeddings(phrase_idxs)
             embed = embed_u[0]
             if len(phrase_idxs) > 1:
-                embed = embed.add(embed_u[1:])
-            pos_u_average[idx] = embed / len(phrase_idxs)
+                for i in embed_u[1:]:
+                    embed = embed.add(i)
+            pos_u_average[idx] = embed.div(len(phrase_idxs))
 
         pos_v_average = torch.Tensor(self.batch_size * 2 * self.window_size, self.embedding_dim)
         for idx, phrase_idxs in enumerate(pos_v):
             embed_v = self.v_embeddings(phrase_idxs)
             embed = embed_v[0]
             if len(phrase_idxs) > 1:
-                embed = embed.add(embed_v[1:])
-            pos_v_average[idx] = embed / len(phrase_idxs)
+                for i in embed_v[1:]:
+                    embed = embed.add(i)
+            pos_v_average[idx] = embed.div(len(phrase_idxs))
 
         neg_v_average = torch.Tensor(pos_u_average.shape[0] * self.neg_sample_num, self.embedding_dim)
         for idx, phrase_idxs in enumerate(neg_v):
             neg_embed_v = self.v_embeddings(phrase_idxs)
             embed = neg_embed_v[0]
             if len(phrase_idxs) > 1:
-                embed = embed.add(neg_embed_v[1:])
-            neg_v_average[idx] = embed / len(phrase_idxs)
+                for i in neg_embed_v[1:]:
+                    embed = embed.add(i)
+            neg_v_average[idx] = embed.div(len(phrase_idxs))
 
         neg_v_average = neg_v_average.view(pos_u_average.shape[0], self.neg_sample_num, self.embedding_dim)
         return pos_u_average, pos_v_average, neg_v_average
