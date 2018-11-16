@@ -24,11 +24,10 @@ class SkipGram(nn.Module):
         pos_u_average = []
         for phrase_idxs in pos_u:
             embed_u = self.u_embeddings(phrase_idxs)
-            embed_u = embed_u.data
-            print(embed_u)
             embed = embed_u[0]
-            for i in embed_u[1:]:
-                embed = embed + i
+            if len(phrase_idxs) > 1:
+                for i in embed_u[1:]:
+                    embed = embed + i
             average_embed = embed / len(embed_u)
             pos_u_average.append(average_embed)
         # pos_u_average shape: (batch_size * 2 * window_size x embedding dimensions)
@@ -37,8 +36,9 @@ class SkipGram(nn.Module):
         for phrase_idxs in pos_v:
             embed_v = self.v_embeddings(phrase_idxs)
             embed = embed_v[0]
-            for i in embed_v[1:]:
-                embed = embed + i
+            if len(phrase_idxs) > 1:
+                for i in embed_v[1:]:
+                    embed = embed + i
             average_embed = embed / len(embed_v)
             pos_v_average.append(average_embed)
         # pos_v_average shape: (batch_size * 2 * window_size x embedding dimensions)
@@ -47,8 +47,9 @@ class SkipGram(nn.Module):
         for phrase_idxs in neg_v:
             embed_neg_v = self.v_embeddings(phrase_idxs)
             embed = embed_neg_v[0]
-            for i in embed_neg_v[1:]:
-                embed = embed + i
+            if len(phrase_idxs) > 1:
+                for i in embed_neg_v[1:]:
+                    embed = embed + i
             average_embed = embed / len(embed_neg_v)
             neg_v_average.append(average_embed)
         neg_v_average = torch.stack(neg_v_average)
