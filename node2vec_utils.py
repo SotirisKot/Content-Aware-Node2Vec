@@ -15,7 +15,7 @@ data_index = 0
 
 class Utils(object):
     def __init__(self, walks, window_size):
-        self.phrase_dic = pickle.load(open('/home/paperspace/sotiris/thesis/relation_utilities/isa/isa_reversed_dic.p', 'rb'))
+        self.phrase_dic = clean_dictionary(pickle.load(open('/home/sotiris/PycharmProjects/thesis/relation_utilities/isa/isa_reversed_dic.p', 'rb')))
         self.stop = True
         self.window_size = window_size
         self.walks = walks
@@ -33,7 +33,6 @@ class Utils(object):
             for nodeid in walk:
                 data_vocabulary.append(nodeid)
                 phrase = self.phrase_dic[int(nodeid)]
-                phrase = tokenize(phrase)
                 phrase = phrase.split()
                 for word in phrase:
                     try:
@@ -96,7 +95,7 @@ class Utils(object):
                 pos_u.append(labels[i])
                 pos_v.append(context[i, j])
         neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size, neg_samples))
-        return np.array(pos_u), np.array(pos_v), neg_v
+        yield np.array(pos_u), np.array(pos_v), neg_v
 
     def get_num_batches(self, batch_size):
         num_batches = len(self.train_data) / batch_size
@@ -116,6 +115,12 @@ bioclean = lambda t: ' '.join(re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
                                                                                                    '').strip().lower()).split()).strip()
 
 
+def clean_dictionary(phrase_dic):
+    for nodeid, phrase in phrase_dic.items():
+        phrase_dic[nodeid] = tokenize(phrase)
+    return phrase_dic
+
+
 def tokenize(x):
     return bioclean(x)
 
@@ -133,9 +138,9 @@ if __name__ == "__main__":
 
     pos_u, pos_v, neg_v = utils.generate_batch(2, 4, 2)
 
-    pos_u = [phr2idx(tokenize(utils.phrase_dic[item]), utils.word2idx) for item in pos_u]
-    pos_v = [phr2idx(tokenize(utils.phrase_dic[item]), utils.word2idx) for item in pos_v]
-    neg_v = [phr2idx(tokenize(utils.phrase_dic[item]), utils.word2idx) for item_list in neg_v for item in item_list]
+    pos_u = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in pos_u]
+    pos_v = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in pos_v]
+    neg_v = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item_list in neg_v for item in item_list]
     print(neg_v)
     # #print(neg_v)
     pos = [Variable(torch.LongTensor(pos_ind), requires_grad=False) for pos_ind in pos_u]

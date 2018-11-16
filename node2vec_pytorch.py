@@ -59,11 +59,11 @@ class Node2Vec:
         total_batches = self.utils.get_num_batches(self.batch_size)  # not very accurate but just for an insight
         for epoch in range(self.epochs):
             batch_num = 0
-            while self.utils.stop:
-                pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size, self.batch_size, self.neg_sample_num)
-                pos_u = [phr2idx(tokenize(self.node2phr[item]), self.utils.word2idx) for item in pos_u]
-                pos_v = [phr2idx(tokenize(self.node2phr[item]), self.utils.word2idx) for item in pos_v]
-                neg_v = [phr2idx(tokenize(self.node2phr[item]), self.utils.word2idx) for item_list in neg_v for item in item_list]
+            for pos_u, pos_v, neg_v in self.utils.generate_batch(self.window_size, self.batch_size, self.neg_sample_num):
+
+                pos_u = [phr2idx(self.node2phr[item], self.utils.word2idx) for item in pos_u]
+                pos_v = [phr2idx(self.node2phr[item], self.utils.word2idx) for item in pos_v]
+                neg_v = [phr2idx(self.node2phr[item], self.utils.word2idx) for item_list in neg_v for item in item_list]
                 pos_u = [Variable(torch.LongTensor(pos_u_ind), requires_grad=False) for pos_u_ind in pos_u]
                 pos_v = [Variable(torch.LongTensor(pos_v_ind), requires_grad=False) for pos_v_ind in pos_v]
                 neg_v = [Variable(torch.LongTensor(neg_v_ind), requires_grad=False) for neg_v_ind in neg_v]
@@ -72,14 +72,11 @@ class Node2Vec:
                     pos_u = [pos.cuda() for pos in pos_u]
                     pos_v = [pos.cuda() for pos in pos_v]
                     neg_v = [neg.cuda() for neg in neg_v]
-                # print(pos_u)
-                # print(pos_v)
-                # print(neg_v)
                 optimizer.zero_grad()
                 loss = model(pos_u, pos_v, neg_v, self.batch_size)
                 loss.backward()
                 optimizer.step()
-                if batch_num % 5000 == 0:
+                if batch_num % 10 == 0:
                     print('Epoch: {}, Batch Loss: {}, num_batch: {}/{} '.format(epoch,loss.item(), batch_num, total_batches))
                 batch_num += 1
             print()
