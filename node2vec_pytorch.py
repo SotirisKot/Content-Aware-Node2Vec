@@ -80,8 +80,8 @@ class Node2Vec:
                     print('Epoch: {}, Batch Loss: {}, num_batch: {}/{} '.format(epoch,loss.item(), batch_num, total_batches))
                 batch_num += 1
             print()
-            # state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
-            # save_checkpoint(state, filename=self.odir_checkpoint + 'isa_average_words_checkpoint_epoch_{}.pth.tar'.format(epoch + 1))
+            state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
+            save_checkpoint(state, filename=self.odir_checkpoint + 'isa_average_words_checkpoint_epoch_{}.pth.tar'.format(epoch + 1))
             self.utils.stop = True
         print("Optimization Finished!")
-        # self.wv = model.save_embeddings(file_name=self.odir_embeddings + self.output_file, idx2word=self.utils.idx2word, use_cuda=True)
+        self.wv = model.save_embeddings(file_name=self.odir_embeddings + self.output_file, idx2word=self.utils.idx2word, use_cuda=True)
