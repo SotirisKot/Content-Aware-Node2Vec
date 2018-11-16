@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import pdb
+from tqdm import tqdm
 
 
 class SkipGram(nn.Module):
@@ -23,39 +24,28 @@ class SkipGram(nn.Module):
         self.v_embeddings.weight.data.uniform_(-0, 0)
 
     def get_average_embedings(self, pos_u, pos_v, neg_v):
-
-        pos_u_average = torch.Tensor((self.batch_size * 2 * self.window_size, self.embedding_dim))
+        pos_u_average = torch.Tensor(self.batch_size * 2 * self.window_size, self.embedding_dim)
         for idx, phrase_idxs in enumerate(pos_u):
             embed_u = self.u_embeddings(phrase_idxs)
-            embed = embed_u[0]
-            if len(phrase_idxs) > 1:
-                for i in embed_u[1:]:
-                    embed = embed + i
-            average_embed = embed / len(embed_u)
-            pos_u_average[idx] = average_embed
+            for embed in embed_u:
+                embed.add_(embed)
+            pos_u_average[idx] = embed / len(embed_u)
 
-        pos_v_average = torch.Tensor((self.batch_size * 2 * self.window_size, self.embedding_dim))
+        pos_v_average = torch.Tensor(self.batch_size * 2 * self.window_size, self.embedding_dim)
         for idx, phrase_idxs in enumerate(pos_v):
             embed_v = self.v_embeddings(phrase_idxs)
-            embed = embed_v[0]
-            if len(phrase_idxs) > 1:
-                for i in embed_v[1:]:
-                    embed = embed + i
-            average_embed = embed / len(embed_v)
-            pos_v_average[idx] = average_embed
+            for embed1 in embed_v:
+                embed1.add_(embed)
+            pos_v_average[idx] = embed1 / len(embed_v)
 
-        neg_v_average = torch.Tensor((pos_u_average.shape[0]*self.neg_sample_num, self.embedding_dim))
+        neg_v_average = torch.Tensor(pos_u_average.shape[0] * self.neg_sample_num, self.embedding_dim)
         for idx, phrase_idxs in enumerate(neg_v):
-            embed_neg_v = self.v_embeddings(phrase_idxs)
-            embed = embed_neg_v[0]
-            if len(phrase_idxs) > 1:
-                for i in embed_neg_v[1:]:
-                    embed = embed + i
-            average_embed = embed / len(embed_neg_v)
-            neg_v_average[idx] = average_embed
+            neg_embed_v = self.v_embeddings(phrase_idxs)
+            for embed2 in neg_embed_v:
+                embed2.add_(embed)
+            neg_v_average[idx] = embed2 / len(neg_embed_v)
         # neg_v_average shape: (batch_size * 2 * window_size x num_neg_samples x embedding dimensions)
         neg_v_average = neg_v_average.view(pos_u_average.shape[0], self.neg_sample_num, self.embedding_dim)
-
         return pos_u_average, pos_v_average, neg_v_average
 
     def forward(self, pos_u, pos_v, neg_v, batch_size):
