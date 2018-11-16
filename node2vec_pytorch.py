@@ -69,9 +69,9 @@ class Node2Vec:
                 neg_v = [Variable(torch.LongTensor(neg_v_ind), requires_grad=False) for neg_v_ind in neg_v]
 
                 if torch.cuda.is_available():
-                    pos_u = pos_u.cuda()
-                    pos_v = pos_v.cuda()
-                    neg_v = neg_v.cuda()
+                    pos_u = [pos.cuda() for pos in pos_u]
+                    pos_v = [pos.cuda() for pos in pos_v]
+                    neg_v = [neg.cuda() for neg in neg_v]
                 optimizer.zero_grad()
                 loss = model(pos_u, pos_v, neg_v, self.batch_size)
                 loss.backward()
