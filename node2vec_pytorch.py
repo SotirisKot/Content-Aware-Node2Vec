@@ -61,17 +61,13 @@ class Node2Vec:
             batch_num = 0
             while self.utils.stop:
                 pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size, self.batch_size, self.neg_sample_num)
-                pos_u = [phr2idx(self.node2phr[item], self.utils.word2idx) for item in pos_u]
-                pos_v = [phr2idx(self.node2phr[item], self.utils.word2idx) for item in pos_v]
-                neg_v = [phr2idx(self.node2phr[item], self.utils.word2idx) for item_list in neg_v for item in item_list]
-                pos_u = [Variable(torch.LongTensor(pos_u_ind), requires_grad=False) for pos_u_ind in pos_u]
-                pos_v = [Variable(torch.LongTensor(pos_v_ind), requires_grad=False) for pos_v_ind in pos_v]
-                neg_v = [Variable(torch.LongTensor(neg_v_ind), requires_grad=False) for neg_v_ind in neg_v]
-
-                if torch.cuda.is_available():
-                    pos_u = [pos.cuda() for pos in pos_u]
-                    pos_v = [pos.cuda() for pos in pos_v]
-                    neg_v = [neg.cuda() for neg in neg_v]
+                pos_u = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)), requires_grad=False).cuda() for item in pos_u]
+                pos_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)), requires_grad=False).cuda() for item in pos_v]
+                neg_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)), requires_grad=False).cuda() for item_list in neg_v for item in item_list]
+                # if torch.cuda.is_available():
+                #     pos_u = [pos.cuda() for pos in pos_u]
+                #     pos_v = [pos.cuda() for pos in pos_v]
+                #     neg_v = [neg.cuda() for neg in neg_v]
                 optimizer.zero_grad()
                 loss = model(pos_u, pos_v, neg_v, self.batch_size)
                 loss.backward()
