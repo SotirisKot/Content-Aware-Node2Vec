@@ -51,7 +51,7 @@ class Node2Vec:
         self.wv = {}
 
     def train(self):
-        model = SkipGram(self.vocabulary_size, self.embedding_dim, self.neg_sample_num)
+        model = SkipGram(self.vocabulary_size, self.embedding_dim, self.neg_sample_num, self.batch_size, self.window_size)
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()
@@ -59,8 +59,8 @@ class Node2Vec:
         total_batches = self.utils.get_num_batches(self.batch_size)  # not very accurate but just for an insight
         for epoch in range(self.epochs):
             batch_num = 0
-            for pos_u, pos_v, neg_v in self.utils.generate_batch(self.window_size, self.batch_size, self.neg_sample_num):
-
+            while self.utils.stop:
+                pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size, self.batch_size, self.neg_sample_num)
                 pos_u = [phr2idx(self.node2phr[item], self.utils.word2idx) for item in pos_u]
                 pos_v = [phr2idx(self.node2phr[item], self.utils.word2idx) for item in pos_v]
                 neg_v = [phr2idx(self.node2phr[item], self.utils.word2idx) for item_list in neg_v for item in item_list]
@@ -80,8 +80,8 @@ class Node2Vec:
                     print('Epoch: {}, Batch Loss: {}, num_batch: {}/{} '.format(epoch,loss.item(), batch_num, total_batches))
                 batch_num += 1
             print()
-            state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
-            save_checkpoint(state, filename=self.odir_checkpoint + 'isa_average_words_checkpoint_epoch_{}.pth.tar'.format(epoch + 1))
+            # state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
+            # save_checkpoint(state, filename=self.odir_checkpoint + 'isa_average_words_checkpoint_epoch_{}.pth.tar'.format(epoch + 1))
             self.utils.stop = True
         print("Optimization Finished!")
-        self.wv = model.save_embeddings(file_name=self.odir_embeddings + self.output_file, idx2word=self.utils.idx2word, use_cuda=True)
+        # self.wv = model.save_embeddings(file_name=self.odir_embeddings + self.output_file, idx2word=self.utils.idx2word, use_cuda=True)

@@ -7,12 +7,14 @@ import pdb
 
 
 class SkipGram(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, neg_sample_num):
+    def __init__(self, vocab_size, embedding_dim, neg_sample_num, batch_size, window_size):
         super(SkipGram, self).__init__()
         self.u_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
         self.v_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
         self.embedding_dim = embedding_dim
         self.neg_sample_num = neg_sample_num
+        self.batch_size = batch_size
+        self.window_size = window_size
         self.init_emb()
 
     def init_emb(self):
@@ -21,40 +23,39 @@ class SkipGram(nn.Module):
         self.v_embeddings.weight.data.uniform_(-0, 0)
 
     def get_average_embedings(self, pos_u, pos_v, neg_v):
-        pos_u_average = []
-        for phrase_idxs in pos_u:
+
+        pos_u_average = torch.ones((self.batch_size * 2 * self.window_size, self.embedding_dim))
+        for idx, phrase_idxs in enumerate(pos_u):
             embed_u = self.u_embeddings(phrase_idxs)
             embed = embed_u[0]
             if len(phrase_idxs) > 1:
                 for i in embed_u[1:]:
                     embed = embed + i
             average_embed = embed / len(embed_u)
-            pos_u_average.append(average_embed)
-        # pos_u_average shape: (batch_size * 2 * window_size x embedding dimensions)
-        pos_u_average = torch.stack(pos_u_average)
-        pos_v_average = []
-        for phrase_idxs in pos_v:
+            pos_u_average[idx] = average_embed
+
+        pos_v_average = torch.ones((self.batch_size * 2 * self.window_size, self.embedding_dim))
+        for idx, phrase_idxs in enumerate(pos_v):
             embed_v = self.v_embeddings(phrase_idxs)
             embed = embed_v[0]
             if len(phrase_idxs) > 1:
                 for i in embed_v[1:]:
                     embed = embed + i
             average_embed = embed / len(embed_v)
-            pos_v_average.append(average_embed)
-        # pos_v_average shape: (batch_size * 2 * window_size x embedding dimensions)
-        pos_v_average = torch.stack(pos_v_average)
-        neg_v_average = []
-        for phrase_idxs in neg_v:
+            pos_v_average[idx] = average_embed
+
+        neg_v_average = torch.ones((pos_u_average.shape[0]*self.neg_sample_num, self.embedding_dim))
+        for idx, phrase_idxs in enumerate(neg_v):
             embed_neg_v = self.v_embeddings(phrase_idxs)
             embed = embed_neg_v[0]
             if len(phrase_idxs) > 1:
                 for i in embed_neg_v[1:]:
                     embed = embed + i
             average_embed = embed / len(embed_neg_v)
-            neg_v_average.append(average_embed)
-        neg_v_average = torch.stack(neg_v_average)
+            neg_v_average[idx] = average_embed
         # neg_v_average shape: (batch_size * 2 * window_size x num_neg_samples x embedding dimensions)
         neg_v_average = neg_v_average.view(pos_u_average.shape[0], self.neg_sample_num, self.embedding_dim)
+
         return pos_u_average, pos_v_average, neg_v_average
 
     def forward(self, pos_u, pos_v, neg_v, batch_size):
