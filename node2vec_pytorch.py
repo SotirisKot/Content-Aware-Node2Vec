@@ -72,6 +72,9 @@ class Node2Vec:
                     pos_u = [pos.cuda() for pos in pos_u]
                     pos_v = [pos.cuda() for pos in pos_v]
                     neg_v = [neg.cuda() for neg in neg_v]
+                print(pos_u)
+                print(pos_v)
+                print(neg_v)
                 optimizer.zero_grad()
                 loss = model(pos_u, pos_v, neg_v, self.batch_size)
                 loss.backward()
