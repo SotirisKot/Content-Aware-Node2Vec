@@ -13,15 +13,10 @@ data_index = 0
 class Utils(object):
     def __init__(self, walks, window_size):
         self.stop = True
-        #self.data_ended = False
         self.window_size = window_size
         self.walks = walks
-        #self.word_pairs = deque()
-        #self.data_index = 0
         data, self.frequencies, self.vocab_words = self.build_dataset(self.walks)
         self.train_data = data
-        #print(self.train_data)
-        # self.create_pairs(data= self.train_data, window_size= self.window_size)
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
 
@@ -61,21 +56,6 @@ class Utils(object):
             sample_table += [idx] * int(x)
         return np.array(sample_table)
 
-    def getBatch(batch_size, train_data):
-        random.shuffle(train_data)
-        sindex = 0
-        eindex = batch_size
-        while eindex < len(train_data):
-            batch = train_data[sindex: eindex]
-            temp = eindex
-            eindex = eindex + batch_size
-            sindex = temp
-            yield batch
-        
-        if eindex >= len(train_data):
-            batch = train_data[sindex:]
-            yield batch
-
     def get_neg_sample_batch(self, pos_pairs, num_neg_samples):
         neg_v = np.random.choice(self.sample_table, size=(len(pos_pairs), num_neg_samples)).tolist()
         return neg_v
@@ -92,7 +72,6 @@ class Utils(object):
         span = 2 * window_size + 1
         context = np.ndarray(shape=(batch_size, 2 * window_size), dtype=np.int64)
         labels = np.ndarray(shape=(batch_size), dtype=np.int64)
-        pos_pair = []
         if data_index + span > len(data):
             data_index = 0
             self.stop = False
@@ -104,7 +83,6 @@ class Utils(object):
             context[i, :] = buffer[:window_size] + buffer[window_size + 1:]
             labels[i] = buffer[window_size]
             if data_index + span > len(data):
-                buffer[:] = data[:span]
                 data_index = 0
                 self.stop = False
             else:
