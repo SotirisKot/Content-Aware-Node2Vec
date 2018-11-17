@@ -94,7 +94,7 @@ class Utils(object):
             for j in range(span - 1):
                 pos_u.append(labels[i])
                 pos_v.append(context[i, j])
-        neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size, neg_samples))
+        neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size * neg_samples))
         return np.array(pos_u), np.array(pos_v), neg_v
 
     def get_num_batches(self, batch_size):
