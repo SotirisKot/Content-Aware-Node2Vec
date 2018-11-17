@@ -24,6 +24,9 @@ class SkipGram(nn.Module):
         self.v_embeddings.weight.data.uniform_(-0, 0)
 
     def get_average_embedings(self, pos_u, pos_v, neg_v):
+        print(len(pos_u))
+        print(len(pos_v))
+        print(len(neg_v))
         pos_u_average = []
         for phrase_idxs in pos_u:
             embed_u = self.u_embeddings(phrase_idxs)
@@ -31,8 +34,9 @@ class SkipGram(nn.Module):
                 embed = torch.sum(embed_u, dim=0)
                 pos_u_average.append(embed.div(len(phrase_idxs)))
             else:
-                pos_u_average.append(embed_u)
+                pos_u_average.append(embed_u.squeeze(0))
         pos_u_average = torch.stack(pos_u_average)
+        print(pos_u_average.shape)
 
         pos_v_average = []
         for phrase_idxs in pos_v:
@@ -41,9 +45,10 @@ class SkipGram(nn.Module):
                 embed = torch.sum(embed_v, dim=0)
                 pos_v_average.append(embed.div(len(phrase_idxs)))
             else:
-                pos_v_average.append(embed_v)
+                pos_v_average.append(embed_v.squeeze(0))
         pos_v_average = torch.stack(pos_v_average)
         pos_v_average = pos_v_average.view(self.batch_size, 2 * self.window_size, self.embedding_dim)
+        print(pos_v_average.shape)
 
         neg_v_average = []
         for phrase_idxs in neg_v:
@@ -52,10 +57,11 @@ class SkipGram(nn.Module):
                 embed = torch.sum(neg_embed_v, dim=0)
                 neg_v_average.append(embed.div(len(phrase_idxs)))
             else:
-                neg_v_average.append(neg_embed_v)
+                neg_v_average.append(neg_embed_v.squeeze(0))
+                
         neg_v_average = torch.stack(neg_v_average)
-        neg_v_average = neg_v_average.view(pos_u_average.shape[0], self.neg_sample_num, self.embedding_dim)
-        
+        neg_v_average = neg_v_average.view(self.batch_size, self.neg_sample_num, self.embedding_dim)
+
         return pos_u_average, pos_v_average, neg_v_average
 
     def forward(self, pos_u, pos_v, neg_v):
