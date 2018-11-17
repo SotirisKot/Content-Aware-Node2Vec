@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 import pdb
 from tqdm import tqdm
+import time
 
 
 class SkipGram(nn.Module):
@@ -55,7 +56,9 @@ class SkipGram(nn.Module):
         return pos_u_average, pos_v_average, neg_v_average
 
     def forward(self, pos_u, pos_v, neg_v, batch_size):
+        start = time.time()
         embed_u, embed_v, neg_embed_v = self.get_average_embedings(pos_u, pos_v, neg_v)
+        print('It took', time.time() - start, 'seconds, to get the average embeds')
         score = torch.mul(embed_u, embed_v)
         score = torch.sum(score, dim=1)
         log_target = F.logsigmoid(score)

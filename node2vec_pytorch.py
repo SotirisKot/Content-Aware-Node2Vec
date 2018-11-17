@@ -6,6 +6,7 @@ import re
 from torch.autograd import Variable
 import torch.optim as optim
 from tqdm import tqdm
+import time
 from node2vec_utils import Utils
 from skipgram_pytorch import SkipGram
 
@@ -60,10 +61,12 @@ class Node2Vec:
         for epoch in range(self.epochs):
             batch_num = 0
             while self.utils.stop:
+                start = time.time()
                 pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size, self.batch_size, self.neg_sample_num)
                 pos_u = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)), requires_grad=False).cuda() for item in pos_u]
                 pos_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)), requires_grad=False).cuda() for item in pos_v]
                 neg_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)), requires_grad=False).cuda() for item in neg_v]
+                print('It took', time.time() - start, 'seconds, to create indices')
                 # if torch.cuda.is_available():
                 #     pos_u = [pos.cuda() for pos in pos_u]
                 #     pos_v = [pos.cuda() for pos in pos_v]
