@@ -29,7 +29,7 @@ class SkipGram(nn.Module):
             embed_u = self.u_embeddings(phrase_idxs)
             if len(phrase_idxs) > 1:
                 embed = torch.sum(embed_u, dim=0)
-                pos_u_average[idx] = embed.div(float(len(phrase_idxs)))
+                pos_u_average[idx] = embed / len(phrase_idxs)
             else:
                 pos_u_average[idx] = embed_u
 
@@ -38,7 +38,7 @@ class SkipGram(nn.Module):
             embed_v = self.v_embeddings(phrase_idxs)
             if len(phrase_idxs) > 1:
                 embed = torch.sum(embed_v, dim=0)
-                pos_v_average[idx] = embed.div(float(len(phrase_idxs)))
+                pos_v_average[idx] = embed / len(phrase_idxs)
             else:
                 pos_v_average[idx] = embed_v
 
@@ -47,7 +47,7 @@ class SkipGram(nn.Module):
             neg_embed_v = self.v_embeddings(phrase_idxs)
             if len(phrase_idxs) > 1:
                 embed = torch.sum(neg_embed_v, dim=0)
-                neg_v_average[idx] = embed.div(float(len(phrase_idxs)))
+                neg_v_average[idx] = embed / len(phrase_idxs)
             else:
                 neg_v_average[idx] = neg_embed_v
 
