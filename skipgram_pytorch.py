@@ -47,9 +47,9 @@ class SkipGram(nn.Module):
             neg_embed_v = self.v_embeddings(phrase_idxs)
             if len(phrase_idxs) > 1:
                 embed = torch.sum(neg_embed_v, dim=0)
-                pos_v_average[idx] = embed.div(len(phrase_idxs))
+                neg_v_average[idx] = embed.div(len(phrase_idxs))
             else:
-                pos_v_average[idx] = neg_embed_v
+                neg_v_average[idx] = neg_embed_v
 
         neg_v_average = neg_v_average.view(pos_u_average.shape[0], self.neg_sample_num, self.embedding_dim)
         return pos_u_average, pos_v_average, neg_v_average
