@@ -21,7 +21,7 @@ class SkipGram(nn.Module):
     def forward(self, pos_u, pos_v, neg_v, batch_size, window_size):
         embed_u = self.u_embeddings(pos_u)
         embed_v = self.v_embeddings(pos_v)
-        embed_v = embed_v.view(batch_size, window_size, self.embedding_dim)
+        embed_v = embed_v.view(batch_size, 2 * window_size, self.embedding_dim)
         neg_embed_v = self.v_embeddings(neg_v)
         score = torch.bmm(embed_v, embed_u.unsqueeze(2)).squeeze()
         log_target = F.logsigmoid(score)
