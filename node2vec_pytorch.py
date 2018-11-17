@@ -66,17 +66,18 @@ class Node2Vec:
                 pos_u = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)), requires_grad=False).cuda() for item in pos_u]
                 pos_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)), requires_grad=False).cuda() for item in pos_v]
                 neg_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)), requires_grad=False).cuda() for item in neg_v]
-                print('It took', time.time() - start, 'seconds, to create indices')
+
                 # if torch.cuda.is_available():
                 #     pos_u = [pos.cuda() for pos in pos_u]
                 #     pos_v = [pos.cuda() for pos in pos_v]
                 #     neg_v = [neg.cuda() for neg in neg_v]
                 optimizer.zero_grad()
-                loss = model(pos_u, pos_v, neg_v, self.batch_size)
+                loss = model(pos_u, pos_v, neg_v)
                 loss.backward()
                 optimizer.step()
                 if batch_num % 10 == 0:
                     print('Epoch: {}, Batch Loss: {}, num_batch: {}/{} '.format(epoch,loss.item(), batch_num, total_batches))
+                    print('It took', time.time() - start, 'seconds, for 10 batches.')
                 batch_num += 1
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
