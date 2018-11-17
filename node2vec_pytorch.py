@@ -1,7 +1,6 @@
 import numpy as np
 import math
 import random
-import wandb
 import torch
 import re
 from torch.autograd import Variable
@@ -53,7 +52,6 @@ class Node2Vec:
         self.wv = {}
 
     def train(self):
-        wandb.init()
         model = SkipGram(self.vocabulary_size, self.embedding_dim, self.neg_sample_num, self.batch_size, self.window_size)
         model.train()
         if torch.cuda.is_available():

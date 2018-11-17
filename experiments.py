@@ -30,10 +30,10 @@ def parse_args():
     parser.add_argument('--walk-length', type=int, default=40,
                         help='Length of walk per source. Default is 80.')
 
-    parser.add_argument('--num-walks', type=int, default=10,
+    parser.add_argument('--num-walks', type=int, default=8,
                         help='Number of walks per source. Default is 10.')
 
-    parser.add_argument('--window-size', type=int, default=10,
+    parser.add_argument('--window-size', type=int, default=5,
                         help='Context size for optimization. Default is 10.')
 
     parser.add_argument('--iter', default=1, type=int,
@@ -92,7 +92,7 @@ def read_graph(file, get_connected_graph=True, remove_selfloops=True):
 def learn_embeddings(walks):
     # walks = [map(str, walk) for walk in walks] # this will work on python2 but not in python3
     print('Creating walk corpus..')
-    # walks = [list(map(str, walk)) for walk in walks]  # this is for python3
+    walks = [list(map(str, walk)) for walk in walks]  # this is for python3
     # odir = '/home/paperspace/sotiris/thesis/'
     # with open('{}.p'.format(os.path.join(odir, 'walks')), 'wb') as dump_file:
     #     pickle.dump(walks, dump_file)
@@ -285,10 +285,10 @@ def main(args):
     print(
         'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
     print('Number of connected components: ', nx.number_connected_components(train_graph))
-    # G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
-    # G.preprocess_transition_probs()
-    # walks = G.simulate_walks(args.num_walks, args.walk_length)
-    walks = pickle.load(open('/home/paperspace/sotiris/thesis/walks.p', 'rb'))
+    G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
+    G.preprocess_transition_probs()
+    walks = G.simulate_walks(args.num_walks, args.walk_length)
+    # walks = pickle.load(open('/home/paperspace/sotiris/thesis/walks.p', 'rb'))
     node_embeddings = learn_embeddings(walks)
     # node_embeddings = load_embeddings('isa_link_predict.emb')
 
