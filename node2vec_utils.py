@@ -74,6 +74,7 @@ class Utils(object):
         span = 2 * window_size + 1
         context = np.ndarray(shape=(batch_size, 2 * window_size), dtype=np.int64)
         labels = np.ndarray(shape=(batch_size), dtype=np.int64)
+        pos_pair = []
         if data_index + span > len(data):
             data_index = 0
             self.stop = False
@@ -85,17 +86,16 @@ class Utils(object):
             context[i, :] = buffer[:window_size] + buffer[window_size + 1:]
             labels[i] = buffer[window_size]
             if data_index + span > len(data):
-                # buffer[:] = data[:span]
+                buffer[:] = data[:span]
                 data_index = 0
                 self.stop = False
             else:
                 buffer = data[data_index:data_index + span]
 
             for j in range(span - 1):
-                if not labels[i] in pos_u:
-                    pos_u.append(labels[i])
+                pos_u.append(labels[i])
                 pos_v.append(context[i, j])
-        neg_v = np.random.choice(self.sample_table, size=(batch_size * neg_samples))
+        neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size * neg_samples))
         return np.array(pos_u), np.array(pos_v), neg_v
 
     def get_num_batches(self, batch_size):
