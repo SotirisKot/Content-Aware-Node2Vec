@@ -60,8 +60,8 @@ class Node2Vec:
         total_batches = self.utils.get_num_batches(self.batch_size)  # not very accurate but just for an insight
         for epoch in range(self.epochs):
             batch_num = 0
+            start = time.time()
             while self.utils.stop:
-                start = time.time()
                 pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size, self.batch_size, self.neg_sample_num)
                 pos_u = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)), requires_grad=False).cuda() for item in pos_u]
                 pos_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)), requires_grad=False).cuda() for item in pos_v]
@@ -78,6 +78,7 @@ class Node2Vec:
                 if batch_num % 10 == 0:
                     print('Epoch: {}, Batch Loss: {}, num_batch: {}/{} '.format(epoch,loss.item(), batch_num, total_batches))
                     print('It took', time.time() - start, 'seconds, for 10 batches.')
+                    start = time.time()
                 batch_num += 1
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
