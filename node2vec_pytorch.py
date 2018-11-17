@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import random
+import wandb
 import torch
 import re
 from torch.autograd import Variable
@@ -52,6 +53,7 @@ class Node2Vec:
         self.wv = {}
 
     def train(self):
+        wandb.init()
         model = SkipGram(self.vocabulary_size, self.embedding_dim, self.neg_sample_num, self.batch_size, self.window_size)
         model.train()
         if torch.cuda.is_available():
@@ -74,6 +76,7 @@ class Node2Vec:
                 #     neg_v = [neg.cuda() for neg in neg_v]
                 optimizer.zero_grad()
                 loss = model(pos_u, pos_v, neg_v)
+
                 loss.backward()
                 optimizer.step()
                 if batch_num % 10 == 0:
