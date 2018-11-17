@@ -18,9 +18,10 @@ class SkipGram(nn.Module):
         self.u_embeddings.weight.data.uniform_(-initrange, initrange)
         self.v_embeddings.weight.data.uniform_(-0, 0)
 
-    def forward(self, pos_u, pos_v, neg_v, batch_size):
+    def forward(self, pos_u, pos_v, neg_v, batch_size, window_size):
         embed_u = self.u_embeddings(pos_u)
         embed_v = self.v_embeddings(pos_v)
+        embed_v = embed_v.view(batch_size, window_size, self.embedding_dim)
         neg_embed_v = self.v_embeddings(neg_v)
         score = torch.bmm(embed_v, embed_u.unsqueeze(2)).squeeze()
         log_target = F.logsigmoid(score)
@@ -29,7 +30,7 @@ class SkipGram(nn.Module):
         sum_log_sampled = F.logsigmoid(-1 * neg_score)
         sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
         loss = log_target + sum_log_sampled
-        return -1 * loss.sum() / self.batch_size
+        return -1 * loss.sum() / batch_size
 
     def save_embeddings(self, file_name, idx2word, use_cuda=False):
         wv = {}
