@@ -53,6 +53,7 @@ class Node2Vec:
 
     def train(self):
         model = SkipGram(self.vocabulary_size, self.embedding_dim, self.neg_sample_num, self.batch_size, self.window_size)
+        model.train()
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()
