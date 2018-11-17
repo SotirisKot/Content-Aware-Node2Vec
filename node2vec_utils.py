@@ -92,9 +92,10 @@ class Utils(object):
                 buffer = data[data_index:data_index + span]
 
             for j in range(span - 1):
-                pos_u.append(labels[i])
+                if not labels[i] in pos_u:
+                    pos_u.append(labels[i])
                 pos_v.append(context[i, j])
-        neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size * neg_samples))
+        neg_v = np.random.choice(self.sample_table, size=(batch_size * neg_samples))
         return np.array(pos_u), np.array(pos_v), neg_v
 
     def get_num_batches(self, batch_size):
@@ -137,11 +138,15 @@ if __name__ == "__main__":
     utils = Utils(walks, 2)
 
     pos_u, pos_v, neg_v = utils.generate_batch(2, 4, 2)
-
+    print(pos_u)
+    print(pos_v)
     pos_u = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in pos_u]
     pos_v = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in pos_v]
-    neg_v = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item_list in neg_v for item in item_list]
+    neg_v = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in neg_v]
+    print(pos_u)
+    print(pos_v)
     print(neg_v)
+    exit()
     # #print(neg_v)
     pos = [Variable(torch.LongTensor(pos_ind), requires_grad=False) for pos_ind in pos_u]
     pos_v = [Variable(torch.LongTensor(pos_ind), requires_grad=False) for pos_ind in pos_v]

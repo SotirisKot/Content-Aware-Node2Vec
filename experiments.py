@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument('--num-walks', type=int, default=10,
                         help='Number of walks per source. Default is 10.')
 
-    parser.add_argument('--window-size', type=int, default=5,
+    parser.add_argument('--window-size', type=int, default=10,
                         help='Context size for optimization. Default is 10.')
 
     parser.add_argument('--iter', default=1, type=int,
@@ -97,7 +97,7 @@ def learn_embeddings(walks):
     # with open('{}.p'.format(os.path.join(odir, 'walks')), 'wb') as dump_file:
     #     pickle.dump(walks, dump_file)
     model = Node2Vec(walks=walks, output_file=args.output, embedding_dim=args.dimensions,
-                     epochs=args.iter, batch_size=32, window_size=args.window_size, neg_sample_num=2)
+                     epochs=args.iter, batch_size=32, window_size=args.window_size, neg_sample_num=5)
     print('Optimization started...')
     model.train()
     embeddings = model.wv
