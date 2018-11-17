@@ -22,7 +22,7 @@ class Utils(object):
 
     def build_word_vocab(self, walks):
         vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence
-        for walk in walks:
+        for walk in tqdm(walks):
             for token in walk:
                 vocabulary.append(token)
         vocab_size = len(vocabulary)
@@ -87,10 +87,9 @@ class Utils(object):
                 self.stop = False
             else:
                 buffer = data[data_index:data_index + span]
-
+            pos_u.append(labels[i])
             for j in range(span - 1):
-                pos_u.append(labels[i])
                 pos_v.append(context[i, j])
-        neg_v = np.random.choice(self.sample_table, size=(batch_size*2*window_size,neg_samples))
+        neg_v = np.random.choice(self.sample_table, size=(batch_size*neg_samples))
         return np.array(pos_u), np.array(pos_v), neg_v
 

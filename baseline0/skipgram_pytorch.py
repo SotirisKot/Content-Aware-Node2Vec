@@ -21,15 +21,15 @@ class SkipGram(nn.Module):
     def forward(self, pos_u, pos_v, neg_v, batch_size):
         embed_u = self.u_embeddings(pos_u)
         embed_v = self.v_embeddings(pos_v)
-        score = torch.mul(embed_u, embed_v)
-        score = torch.sum(score, dim=1)
-        log_target = F.logsigmoid(score)
         neg_embed_v = self.v_embeddings(neg_v)
+        score = torch.bmm(embed_v, embed_u.unsqueeze(2)).squeeze()
+        log_target = F.logsigmoid(score)
+        log_target = torch.sum(log_target, dim=1)
         neg_score = torch.bmm(neg_embed_v, embed_u.unsqueeze(2)).squeeze()
         sum_log_sampled = F.logsigmoid(-1 * neg_score)
         sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
         loss = log_target + sum_log_sampled
-        return -1 * loss.sum() / batch_size
+        return -1 * loss.sum() / self.batch_size
 
     def save_embeddings(self, file_name, idx2word, use_cuda=False):
         wv = {}
