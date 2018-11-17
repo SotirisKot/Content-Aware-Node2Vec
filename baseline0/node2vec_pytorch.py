@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import StepLR
 import time
 from tqdm import tqdm
 from node2vec_utils import Utils
-from skipgram_pytorch import skipgram
+from skipgram_pytorch import SkipGram
 
 
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
@@ -31,7 +31,7 @@ class Node2Vec:
         self.wv = {}
 
     def train(self):
-        model = skipgram(self.vocabulary_size, self.embedding_dim)
+        model = SkipGram(self.vocabulary_size, self.embedding_dim)
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()

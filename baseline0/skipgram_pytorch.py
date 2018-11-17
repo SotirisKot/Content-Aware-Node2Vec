@@ -5,9 +5,9 @@ import torch.nn.functional as F
 import numpy as np
 
 
-class skipgram(nn.Module):
+class SkipGram(nn.Module):
     def __init__(self, vocab_size, embedding_dim):
-        super(skipgram, self).__init__()
+        super(SkipGram, self).__init__()
         self.u_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
         self.v_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
         self.embedding_dim = embedding_dim
