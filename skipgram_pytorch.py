@@ -5,7 +5,6 @@ import torch.nn.functional as F
 import numpy as np
 import pdb
 from tqdm import tqdm
-import time
 
 
 class SkipGram(nn.Module):
@@ -22,50 +21,49 @@ class SkipGram(nn.Module):
     def init_emb(self):
         initrange = 0.5 / self.embedding_dim
         self.u_embeddings.weight.data.uniform_(-initrange, initrange)
-        self.v_embeddings.weight.data.uniform_(-initrange, initrange)
+        self.v_embeddings.weight.data.uniform_(-0, 0)
 
     def get_average_embedings(self, pos_u, pos_v, neg_v):
-        pos_u_average = torch.Tensor(self.batch_size, self.embedding_dim)
+        pos_u_average = torch.Tensor(self.batch_size * 2 * self.window_size, self.embedding_dim)
         for idx, phrase_idxs in enumerate(pos_u):
             embed_u = self.u_embeddings(phrase_idxs)
             if len(phrase_idxs) > 1:
                 embed = torch.sum(embed_u, dim=0)
-                pos_u_average[idx] = embed / len(phrase_idxs)
+                pos_u_average[idx] = embed.div(len(phrase_idxs))
             else:
                 pos_u_average[idx] = embed_u
+
         pos_v_average = torch.Tensor(self.batch_size * 2 * self.window_size, self.embedding_dim)
         for idx, phrase_idxs in enumerate(pos_v):
             embed_v = self.v_embeddings(phrase_idxs)
             if len(phrase_idxs) > 1:
                 embed = torch.sum(embed_v, dim=0)
-                pos_v_average[idx] = embed / len(phrase_idxs)
+                pos_v_average[idx] = embed.div(len(phrase_idxs))
             else:
                 pos_v_average[idx] = embed_v
-        pos_v_average = pos_v_average.view(pos_u_average.shape[0], 2 * self.window_size, self.embedding_dim)
 
         neg_v_average = torch.Tensor(pos_u_average.shape[0] * self.neg_sample_num, self.embedding_dim)
         for idx, phrase_idxs in enumerate(neg_v):
             neg_embed_v = self.v_embeddings(phrase_idxs)
             if len(phrase_idxs) > 1:
                 embed = torch.sum(neg_embed_v, dim=0)
-                neg_v_average[idx] = embed / len(phrase_idxs)
+                neg_v_average[idx] = embed.div(len(phrase_idxs))
             else:
                 neg_v_average[idx] = neg_embed_v
+
         neg_v_average = neg_v_average.view(pos_u_average.shape[0], self.neg_sample_num, self.embedding_dim)
         return pos_u_average, pos_v_average, neg_v_average
 
     def forward(self, pos_u, pos_v, neg_v):
         embed_u, embed_v, neg_embed_v = self.get_average_embedings(pos_u, pos_v, neg_v)
-        score = torch.bmm(embed_v, embed_u.unsqueeze(2)).squeeze()
-        target = torch.sum(score, dim=1)
-        target = target.sum(-1)
+        score = torch.mul(embed_u, embed_v)
+        score = torch.sum(score, dim=1)
+        log_target = F.logsigmoid(score)
         neg_score = torch.bmm(neg_embed_v, embed_u.unsqueeze(2)).squeeze()
-        neg_score = torch.exp(neg_score) * (neg_score > 0.).float()
-        neg_score = neg_score.sum(-1)
-        neg_score = - torch.log(1 + neg_score)
-        neg_score = neg_score.sum(-1)
-        loss = -(target + neg_score)
-        return loss
+        sum_log_sampled = F.logsigmoid(-1 * neg_score)
+        sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
+        loss = log_target + sum_log_sampled
+        return -1 * loss.sum() / self.batch_size
 
     def save_embeddings(self, file_name, idx2word, use_cuda=False):
         wv = {}
