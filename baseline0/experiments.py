@@ -263,67 +263,67 @@ def load_embeddings(file):
 def main(args):
     # nx_G = read_graph(file=args.input, get_connected_graph=False, remove_selfloops=True)
     # print(nx_G.number_of_nodes(), nx_G.number_of_edges())
-    # train_pos = pickle.load(open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
-    #                              '-train-test-splits/isa_train_pos.p', 'rb'))
-    # test_pos = pickle.load(open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
-    #                             '-train-test-splits/isa_test_pos.p', 'rb'))
-    # train_neg = pickle.load(
-    #     open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
-    #          '-train-test-splits/isa_train_neg.p', 'rb'))
-    # test_neg = pickle.load(
-    #     open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
-    #          '-train-test-splits/isa_test_neg.p', 'rb'))
-    # # train_pos, train_neg, test_pos, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
-    # # train_neg, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
-    # print('Number of positive training samples: ', len(train_pos))
-    # print('Number of negative training samples: ', len(train_neg))
-    # print('Number of positive testing samples: ', len(test_pos))
-    # print('Number of negative testing samples: ', len(test_neg))
-    # train_graph = read_graph(
-    #     file='/home/paperspace/sotiris/thesis/isa-undirected-dataset-train-test-splits/isa_train_graph_undirected.edgelist',
-    #     get_connected_graph=False, remove_selfloops=False)
-    # print(
-    #     'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
-    # print('Number of connected components: ', nx.number_connected_components(train_graph))
-    # G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
-    # G.preprocess_transition_probs()
-    # walks = G.simulate_walks(args.num_walks, args.walk_length)
-    #walks = pickle.load(open('/home/paperspace/sotiris/thesis/walks.p', 'rb'))
-    walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
-             ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
-             ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
+    train_pos = pickle.load(open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
+                                 '-train-test-splits/isa_train_pos.p', 'rb'))
+    test_pos = pickle.load(open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
+                                '-train-test-splits/isa_test_pos.p', 'rb'))
+    train_neg = pickle.load(
+        open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
+             '-train-test-splits/isa_train_neg.p', 'rb'))
+    test_neg = pickle.load(
+        open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
+             '-train-test-splits/isa_test_neg.p', 'rb'))
+    # train_pos, train_neg, test_pos, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
+    # train_neg, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
+    print('Number of positive training samples: ', len(train_pos))
+    print('Number of negative training samples: ', len(train_neg))
+    print('Number of positive testing samples: ', len(test_pos))
+    print('Number of negative testing samples: ', len(test_neg))
+    train_graph = read_graph(
+        file='/home/paperspace/sotiris/thesis/isa-undirected-dataset-train-test-splits/isa_train_graph_undirected.edgelist',
+        get_connected_graph=False, remove_selfloops=False)
+    print(
+        'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
+    print('Number of connected components: ', nx.number_connected_components(train_graph))
+    G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
+    G.preprocess_transition_probs()
+    walks = G.simulate_walks(args.num_walks, args.walk_length)
+    walks = pickle.load(open('/home/paperspace/sotiris/thesis/walks.p', 'rb'))
+    # walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
+    #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
+    #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
     node_embeddings = learn_embeddings(walks)
     # node_embeddings = load_embeddings('isa_link_predict.emb')
 
     # for training
-    # train_pos_edge_embs = get_edge_embeddings(train_pos, node_embeddings)
-    # train_neg_edge_embs = get_edge_embeddings(train_neg, node_embeddings)
-    # train_set = np.concatenate([train_pos_edge_embs, train_neg_edge_embs])
-    #
-    # # labels: 1-> link exists, 0-> false edge
-    # train_labels = np.zeros(len(train_set))
-    # train_labels[:len(train_pos_edge_embs)] = 1
-    #
-    # # for testing
-    # test_pos_edge_embs = get_edge_embeddings(test_pos, node_embeddings)
-    # test_neg_edge_embs = get_edge_embeddings(test_neg, node_embeddings)
-    # test_set = np.concatenate([test_pos_edge_embs, test_neg_edge_embs])
-    #
-    # # labels: 1-> link exists, 0-> false edge
-    # test_labels = np.zeros(len(test_set))
-    # test_labels[:len(test_pos_edge_embs)] = 1
-    #
-    # # train the classifier and evaluate in the test set
-    # classifier = LogisticRegression(random_state=0)
-    # classifier.fit(train_set, train_labels)
-    #
-    # # evaluate
-    # test_preds = classifier.predict_proba(test_set)[:, 1]
-    # false_positive_rate, true_positive_rate, thresholds = roc_curve(test_labels, test_preds)
-    # test_auc = auc(false_positive_rate, true_positive_rate)
-    # test_roc = roc_auc_score(test_labels, test_preds)
-    # print('node2vec Test ROC score: ', str(test_roc))
-    # print('node2vec Test AUC score: ', str(test_auc))
+    train_pos_edge_embs = get_edge_embeddings(train_pos, node_embeddings)
+    train_neg_edge_embs = get_edge_embeddings(train_neg, node_embeddings)
+    train_set = np.concatenate([train_pos_edge_embs, train_neg_edge_embs])
+
+    # labels: 1-> link exists, 0-> false edge
+    train_labels = np.zeros(len(train_set))
+    train_labels[:len(train_pos_edge_embs)] = 1
+
+    # for testing
+    test_pos_edge_embs = get_edge_embeddings(test_pos, node_embeddings)
+    test_neg_edge_embs = get_edge_embeddings(test_neg, node_embeddings)
+    test_set = np.concatenate([test_pos_edge_embs, test_neg_edge_embs])
+
+    # labels: 1-> link exists, 0-> false edge
+    test_labels = np.zeros(len(test_set))
+    test_labels[:len(test_pos_edge_embs)] = 1
+
+    # train the classifier and evaluate in the test set
+    classifier = LogisticRegression(random_state=0)
+    classifier.fit(train_set, train_labels)
+
+    # evaluate
+    test_preds = classifier.predict_proba(test_set)[:, 1]
+    false_positive_rate, true_positive_rate, thresholds = roc_curve(test_labels, test_preds)
+    test_auc = auc(false_positive_rate, true_positive_rate)
+    test_roc = roc_auc_score(test_labels, test_preds)
+    print('node2vec Test ROC score: ', str(test_roc))
+    print('node2vec Test AUC score: ', str(test_auc))
 
 
 if __name__ == "__main__":
