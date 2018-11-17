@@ -81,6 +81,7 @@ class Utils(object):
         buffer = data[data_index:data_index + span]
         pos_u = []
         pos_v = []
+        pos_z = []
         for i in range(batch_size):
             data_index += 1
             context[i, :] = buffer[:window_size] + buffer[window_size + 1:]
@@ -91,11 +92,10 @@ class Utils(object):
                 self.stop = False
             else:
                 buffer = data[data_index:data_index + span]
-
+            pos_u.append(labels[i])
             for j in range(span - 1):
-                pos_u.append(labels[i])
                 pos_v.append(context[i, j])
-        neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size * neg_samples))
+        neg_v = np.random.choice(self.sample_table, size=(batch_size * neg_samples))
         return np.array(pos_u), np.array(pos_v), neg_v
 
     def get_num_batches(self, batch_size):
