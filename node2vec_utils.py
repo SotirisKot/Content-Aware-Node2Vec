@@ -90,11 +90,29 @@ class Utils(object):
                 self.stop = False
             else:
                 buffer = data[data_index:data_index + span]
+            pos_u.append(labels[i])
             for j in range(span - 1):
-                pos_u.append(labels[i])
                 pos_v.append(context[i, j])
-        neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size * neg_samples)).tolist()
+        neg_v = np.random.choice(self.sample_table, size=(batch_size * neg_samples)).tolist()
         return pos_u, pos_v, neg_v
+
+    def node2vec_yielder(self, window_size, neg_samples):
+        data = self.train_data
+        for idx, phr in enumerate(data):
+            pos = []
+            phr_inds = phr2idx(self.phrase_dic[int(phr)], self.word2idx)
+            if not idx+window_size >= len(data):
+                pos_right = data[idx+1:idx + window_size + 1]
+                pos = pos_right
+            if not idx-window_size < 0:
+                pos_left = data[idx-window_size:idx]
+                pos += pos_left
+            neg = np.random.choice(self.sample_table, size=(neg_samples)).tolist()
+            neg = [self.phrase_dic[n] for n in neg]
+            pos_inds = [phr2idx(self.phrase_dic[int(item)], self.word2idx) for item in pos]
+            neg_inds = [phr2idx(item, self.word2idx) for item in neg]
+            yield phr_inds, pos_inds, neg_inds
+
 
     def get_num_batches(self, batch_size):
         num_batches = len(self.train_data) / batch_size
@@ -106,6 +124,16 @@ bioclean = lambda t: ' '.join(re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
                                      t.replace('"', '').replace('/', '').replace('\\', '').replace("'",
                                                                                                    '').strip().lower()).split()).strip()
 
+def get_index(w, vocab):
+    try:
+        return vocab[w]
+    except KeyError:
+        return vocab['UNKN']
+
+
+def phr2idx(phr, word_vocab):
+    p = [get_index(t, word_vocab) for t in phr.split()]
+    return p
 
 def clean_dictionary(phrase_dic):
     for nodeid, phrase in phrase_dic.items():
@@ -123,13 +151,8 @@ if __name__ == "__main__":
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
     utils = Utils(walks, 2)
 
-    pos_u, pos_v, neg_v = utils.generate_batch(10, 32, 5)
-    print(len(pos_u))
-    print(len(pos_v))
-    print(len(neg_v))
-    print(pos_u)
-    print(pos_v)
-    print(neg_v)
+    # for batch in utils.node2vec_yielder(2,5):
+    #     print(batch)
     # neg_v = Variable(torch.LongTensor(neg_v))
     # print(neg_v)
     # pos_u = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in pos_u]
