@@ -27,43 +27,33 @@ class SkipGram(nn.Module):
         pos_u_average = []
         for phrase_idxs in pos_u:
             embed_u = self.u_embeddings(phrase_idxs)
-            if len(phrase_idxs) > 1:
-                embed = torch.sum(embed_u, dim=0)
-                pos_u_average.append(embed.div(len(phrase_idxs)))
-            else:
-                pos_u_average.append(embed_u.squeeze(0))
+            embed = torch.sum(embed_u, dim=0)
+            pos_u_average.append(embed / len(phrase_idxs))
         pos_u_average = torch.stack(pos_u_average)
 
         pos_v_average = []
         for phrase_idxs in pos_v:
             embed_v = self.v_embeddings(phrase_idxs)
-            if len(phrase_idxs) > 1:
-                embed = torch.sum(embed_v, dim=0)
-                pos_v_average.append(embed.div(len(phrase_idxs)))
-            else:
-                pos_v_average.append(embed_v.squeeze(0))
+            embed = torch.sum(embed_v, dim=0)
+            pos_v_average.append(embed / len(phrase_idxs))
         pos_v_average = torch.stack(pos_v_average)
-        pos_v_average = pos_v_average.view(self.batch_size, 2 * self.window_size, self.embedding_dim)
 
         neg_v_average = []
         for phrase_idxs in neg_v:
             neg_embed_v = self.v_embeddings(phrase_idxs)
-            if len(phrase_idxs) > 1:
-                embed = torch.sum(neg_embed_v, dim=0)
-                neg_v_average.append(embed.div(len(phrase_idxs)))
-            else:
-                neg_v_average.append(neg_embed_v.squeeze(0))
+            embed = torch.sum(neg_embed_v, dim=0)
+            neg_v_average.append(embed / len(phrase_idxs))
 
         neg_v_average = torch.stack(neg_v_average)
-        neg_v_average = neg_v_average.view(self.batch_size, self.neg_sample_num, self.embedding_dim)
+        neg_v_average = neg_v_average.view(pos_u_average.shape[0], self.neg_sample_num, self.embedding_dim)
 
         return pos_u_average, pos_v_average, neg_v_average
 
     def forward(self, pos_u, pos_v, neg_v):
         embed_u, embed_v, neg_embed_v = self.get_average_embedings(pos_u, pos_v, neg_v)
-        score = torch.bmm(embed_v, embed_u.unsqueeze(2)).squeeze()
+        score = torch.mul(embed_u, embed_v)
+        score = torch.sum(score, dim=1)
         log_target = F.logsigmoid(score)
-        log_target = torch.sum(log_target, dim=1)
         neg_score = torch.bmm(neg_embed_v, embed_u.unsqueeze(2)).squeeze()
         sum_log_sampled = F.logsigmoid(-1 * neg_score)
         sum_log_sampled = torch.sum(sum_log_sampled, dim=1)

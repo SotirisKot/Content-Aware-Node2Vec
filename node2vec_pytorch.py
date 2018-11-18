@@ -53,12 +53,10 @@ class Node2Vec:
 
     def train(self):
         model = SkipGram(self.vocabulary_size, self.embedding_dim, self.neg_sample_num, self.batch_size, self.window_size)
-        model.train()
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()
         optimizer = optim.SGD(model.parameters(), lr=0.025)
-        total_batches = self.utils.get_num_batches(self.batch_size)  # not very accurate but just for an insight
         for epoch in range(self.epochs):
             batch_num = 0
             start = time.time()
@@ -77,7 +75,7 @@ class Node2Vec:
                 loss.backward()
                 optimizer.step()
                 if batch_num % 10 == 0:
-                    print('Epoch: {}, Batch Loss: {}, num_batch: {}/{} '.format(epoch,loss.item(), batch_num, total_batches))
+                    print('Epoch: {}, Batch Loss: {}, num_batch: {} '.format(epoch,loss.item(), batch_num))
                     print('It took', time.time() - start, 'seconds, for 10 batches.')
                     start = time.time()
                 batch_num += 1

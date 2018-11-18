@@ -6,6 +6,7 @@ from tqdm import tqdm
 import numpy as np
 import math
 import torch
+import random
 from torch.autograd import Variable
 from skipgram_pytorch import SkipGram
 
@@ -74,41 +75,31 @@ class Utils(object):
         span = 2 * window_size + 1
         context = np.ndarray(shape=(batch_size, 2 * window_size), dtype=np.int64)
         labels = np.ndarray(shape=(batch_size), dtype=np.int64)
-        pos_pair = []
         if data_index + span > len(data):
             data_index = 0
             self.stop = False
         buffer = data[data_index:data_index + span]
         pos_u = []
         pos_v = []
-        pos_z = []
         for i in range(batch_size):
             data_index += 1
             context[i, :] = buffer[:window_size] + buffer[window_size + 1:]
             labels[i] = buffer[window_size]
             if data_index + span > len(data):
-                buffer[:] = data[:span]
                 data_index = 0
                 self.stop = False
             else:
                 buffer = data[data_index:data_index + span]
-            pos_u.append(labels[i])
             for j in range(span - 1):
+                pos_u.append(labels[i])
                 pos_v.append(context[i, j])
-        neg_v = np.random.choice(self.sample_table, size=(batch_size * neg_samples))
-        return np.array(pos_u), np.array(pos_v), neg_v
+        neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size * neg_samples)).tolist()
+        return pos_u, pos_v, neg_v
 
     def get_num_batches(self, batch_size):
         num_batches = len(self.train_data) / batch_size
         num_batches = int(math.ceil(num_batches))
         return num_batches
-
-
-def get_index(w, vocab):
-    try:
-        return vocab[w]
-    except KeyError:
-        return vocab['UNKN']
 
 
 bioclean = lambda t: ' '.join(re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
@@ -126,36 +117,40 @@ def tokenize(x):
     return bioclean(x)
 
 
-def phr2idx(phr, word_vocab):
-    p = [get_index(t, word_vocab) for t in phr.split()]
-    return p
-
-
 if __name__ == "__main__":
     walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
     utils = Utils(walks, 2)
 
-    pos_u, pos_v, neg_v = utils.generate_batch(2, 4, 2)
-    print(pos_u)
-    print(pos_v)
-    pos_u = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in pos_u]
-    pos_v = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in pos_v]
-    neg_v = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in neg_v]
+    pos_u, pos_v, neg_v = utils.generate_batch(10, 32, 5)
+    print(len(pos_u))
+    print(len(pos_v))
+    print(len(neg_v))
     print(pos_u)
     print(pos_v)
     print(neg_v)
-    exit()
-    # #print(neg_v)
-    pos = [Variable(torch.LongTensor(pos_ind), requires_grad=False) for pos_ind in pos_u]
-    pos_v = [Variable(torch.LongTensor(pos_ind), requires_grad=False) for pos_ind in pos_v]
-    neg_v = [Variable(torch.LongTensor(item_list), requires_grad=False) for item_list in neg_v]
-    model = SkipGram(utils.vocabulary_size, 128, neg_sample_num=2)
-    # # print(pos)
-    # # print(pos_v)
-    # # print(neg_v)
-    loss = model(pos, pos_v, neg_v, 4)
+    # neg_v = Variable(torch.LongTensor(neg_v))
+    # print(neg_v)
+    # pos_u = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in pos_u]
+    # print(pos_u)
+    # pos_v = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item_list in pos_v for item in item_list]
+    # print(pos_v)
+    # neg_v = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in neg_v]
+    # print(neg_v)
+    # print(pos_u)
+    # print(pos_v)
+    # print(neg_v)
+    # exit()
+    # # #print(neg_v)
+    # pos = [Variable(torch.LongTensor(pos_ind), requires_grad=False) for pos_ind in pos_u]
+    # pos_v = [Variable(torch.LongTensor(pos_ind), requires_grad=False) for pos_ind in pos_v]
+    # neg_v = [Variable(torch.LongTensor(item_list), requires_grad=False) for item_list in neg_v]
+    # model = SkipGram(utils.vocabulary_size, 128, neg_sample_num=2)
+    # # # print(pos)
+    # # # print(pos_v)
+    # # # print(neg_v)
+    # loss = model(pos, pos_v, neg_v, 4)
     # neg_v = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in neg_v]
     # print(neg_v)
     # print(neg_v.shape)
