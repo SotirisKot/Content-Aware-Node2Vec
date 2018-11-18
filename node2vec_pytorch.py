@@ -57,6 +57,7 @@ class Node2Vec:
             print('GPU available!!')
             model.cuda()
         optimizer = optim.SGD(model.parameters(), lr=0.025)
+        total_batches = self.utils.get_num_batches(self.batch_size)
         for epoch in range(self.epochs):
             batch_num = 0
             start = time.time()
@@ -75,7 +76,7 @@ class Node2Vec:
                 loss.backward()
                 optimizer.step()
                 if batch_num % 10 == 0:
-                    print('Epoch: {}, Batch Loss: {}, num_batch: {} '.format(epoch,loss.item(), batch_num))
+                    print('Epoch: {}, Batch Loss: {}, num_batch: {}/{}'.format(epoch,loss.item(), batch_num, total_batches))
                     print('It took', time.time() - start, 'seconds, for 10 batches.')
                     start = time.time()
                 batch_num += 1
