@@ -27,13 +27,13 @@ def parse_args():
     parser.add_argument('--dimensions', type=int, default=128,
                         help='Number of dimensions. Default is 128.')
 
-    parser.add_argument('--walk-length', type=int, default=40,
+    parser.add_argument('--walk-length', type=int, default=20,
                         help='Length of walk per source. Default is 80.')
 
-    parser.add_argument('--num-walks', type=int, default=10,
+    parser.add_argument('--num-walks', type=int, default=5,
                         help='Number of walks per source. Default is 10.')
 
-    parser.add_argument('--window-size', type=int, default=8,
+    parser.add_argument('--window-size', type=int, default=5,
                         help='Context size for optimization. Default is 10.')
 
     parser.add_argument('--iter', default=1, type=int,
@@ -97,7 +97,7 @@ def learn_embeddings(walks):
     # with open('{}.p'.format(os.path.join(odir, 'walks')), 'wb') as dump_file:
     #     pickle.dump(walks, dump_file)
     model = Node2Vec(walks=walks, output_file=args.output, embedding_dim=args.dimensions,
-                     epochs=args.iter, batch_size=16, window_size=args.window_size, neg_sample_num=3)
+                     epochs=args.iter, batch_size=16, window_size=args.window_size, neg_sample_num=2)
     print('Optimization started...')
     model.train()
     embeddings = model.wv
@@ -288,7 +288,7 @@ def main(args):
     G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
     G.preprocess_transition_probs()
     walks = G.simulate_walks(args.num_walks, args.walk_length)
-    walks = pickle.load(open('/home/paperspace/sotiris/thesis/walks.p', 'rb'))
+    # walks = pickle.load(open('/home/paperspace/sotiris/thesis/walks.p', 'rb'))
     # walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
     #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
     #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
