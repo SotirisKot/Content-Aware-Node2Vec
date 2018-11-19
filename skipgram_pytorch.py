@@ -49,25 +49,23 @@ class SkipGram(nn.Module):
 
         return pos_u_average, pos_v_average, neg_v_average
 
-    # def forward(self, pos_u, pos_v, neg_v):
-    #     embed_u, embed_v, neg_embed_v = self.get_average_embedings(pos_u, pos_v, neg_v)
-    #     score = torch.mul(embed_u, embed_v)
-    #     score = torch.sum(score, dim=1)
-    #     log_target = F.logsigmoid(score)
-    #     neg_score = torch.bmm(neg_embed_v, embed_u.unsqueeze(2)).squeeze()
-    #     sum_log_sampled = F.logsigmoid(-1 * neg_score)
-    #     sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
-    #     loss = log_target + sum_log_sampled
-    #     return -1 * loss.sum() / self.batch_size
     def forward(self, pos_u, pos_v, neg_v):
         embed_u, embed_v, neg_embed_v = self.get_average_embedings(pos_u, pos_v, neg_v)
-        score = torch.sum(torch.mul(embed_u, embed_v), dim=1)
-        score = torch.clamp(score, max=10, min=-10)
-        score = -F.logsigmoid(score)
+        # score = torch.sum(torch.mul(embed_u, embed_v), dim=1)
+        # score = torch.clamp(score, max=10, min=-10)
+        # score = -F.logsigmoid(score)
+        # neg_score = torch.bmm(neg_embed_v, embed_u.unsqueeze(2)).squeeze()
+        # neg_score = torch.clamp(neg_score, max=10, min=-10)
+        # neg_score = -torch.sum(F.logsigmoid(-neg_score), dim=1)
+        # return torch.mean(score + neg_score)
+        score = torch.mul(embed_u, embed_v)
+        score = torch.sum(score, dim=1)
+        log_target = F.logsigmoid(score)
         neg_score = torch.bmm(neg_embed_v, embed_u.unsqueeze(2)).squeeze()
-        neg_score = torch.clamp(neg_score, max=10, min=-10)
-        neg_score = -torch.sum(F.logsigmoid(-neg_score), dim=1)
-        return torch.mean(score + neg_score)
+        sum_log_sampled = F.logsigmoid(-neg_score)
+        sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
+        loss = log_target + sum_log_sampled
+        return -1 * loss.sum() / self.batch_size
 
     def save_embeddings(self, file_name, idx2word, use_cuda=False):
         wv = {}
