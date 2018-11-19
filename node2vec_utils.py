@@ -9,14 +9,13 @@ import torch
 import random
 from torch.autograd import Variable
 from skipgram_pytorch import SkipGram
-
 np.random.seed(12345)
 data_index = 0
 
 
 class Utils(object):
     def __init__(self, walks, window_size):
-        self.phrase_dic = clean_dictionary(pickle.load(open('/home/paperspace/sotiris/thesis/relation_utilities/isa/isa_reversed_dic.p', 'rb')))
+        self.phrase_dic = clean_dictionary(pickle.load(open('relation_utilities/isa/isa_reversed_dic.p', 'rb')))
         self.stop = True
         self.window_size = window_size
         self.walks = walks
@@ -90,11 +89,10 @@ class Utils(object):
                 self.stop = False
             else:
                 buffer = data[data_index:data_index + span]
-            # pos_u.append(labels[i])
+            pos_u.append(labels[i])
             for j in range(span - 1):
-                pos_u.append(labels[i])
                 pos_v.append(context[i, j])
-        neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size * neg_samples)).tolist()
+        neg_v = np.random.choice(self.sample_table, size=(batch_size * neg_samples)).tolist()
         return pos_u, pos_v, neg_v
 
     def get_num_batches(self, batch_size):
