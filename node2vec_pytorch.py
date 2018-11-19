@@ -60,10 +60,12 @@ class Node2Vec:
         total_batches = self.utils.get_num_batches(self.batch_size)
         for epoch in range(self.epochs):
             batch_num = 0
+            batch_costs = []
             # start = time.time()
             # while self.utils.stop:
             for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
-                # pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size, self.batch_size, self.neg_sample_num)
+                # pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size, self.batch_size,
+                # self.neg_sample_num)
                 pos_u = Variable(torch.LongTensor(phr2idx(self.node2phr[int(pos_u)], self.utils.word2idx)), requires_grad=False).cuda()
                 pos_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[int(item)], self.utils.word2idx)), requires_grad=False).cuda() for item in pos_v]
                 neg_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[int(item)], self.utils.word2idx)), requires_grad=False).cuda() for item in neg_v]
@@ -73,14 +75,27 @@ class Node2Vec:
                 #     pos_v = [pos.cuda() for pos in pos_v]
                 #     neg_v = [neg.cuda() for neg in neg_v]
                 optimizer.zero_grad()
-                loss = model(pos_u, pos_v, neg_v)
-                loss.backward()
-                optimizer.step()
-                if batch_num % 10 == 0:
-                    print('Epoch: {}, Batch Loss: {}, num_batch: {}/{}'.format(epoch,loss.item(), batch_num, total_batches))
-                    # print('It took', time.time() - start, 'seconds, for 10 batches.')
-                    # start = time.time()
-                batch_num += 1
+                # loss = model(pos_u, pos_v, neg_v)
+                # loss.backward()
+                # optimizer.step()
+                # optimizer.zero_grad()
+                instance_cost = model(pos_u, pos_v, neg_v)
+                batch_costs.append(instance_cost)
+                if len(batch_costs) == self.batch_size:
+                    batch_cost = sum(batch_costs) / float(len(batch_costs))
+                    batch_cost.backward()
+                    optimizer.step()
+                    optimizer.zero_grad()
+                    batch_aver_cost = batch_cost.cpu().item()
+                    batch_costs = []
+                    print('Epoch: {}, Batch Loss: {}, num_batch: {}/{}'.format(epoch, batch_aver_cost, batch_num,
+                                                                               total_batches))
+
+                # if batch_num % 10 == 0:
+                #     print('Epoch: {}, Batch Loss: {}, num_batch: {}/{}'.format(epoch,loss.item(), batch_num, total_batches))
+                #     # print('It took', time.time() - start, 'seconds, for 10 batches.')
+                #     # start = time.time()
+                # batch_num += 1
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             save_checkpoint(state, filename=self.odir_checkpoint + 'isa_average_words_checkpoint_epoch_{}.pth.tar'.format(epoch + 1))
