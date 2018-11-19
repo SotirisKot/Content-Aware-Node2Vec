@@ -19,7 +19,7 @@ class SkipGram(nn.Module):
         # self.v_embeddings.weight.data.uniform_(-0, 0)
 
     def dot_product_sum(self, node_emb, ex_embeds, exp=False):
-        node_emb = node_emb.unsqueeze(0).expand_as(ex_embeds)
+        node_emb = node_emb.expand_as(ex_embeds)
         res = node_emb * ex_embeds
         res = res.sum(-1) / float(res.size(0))
         if (exp):

@@ -99,6 +99,8 @@ class Utils(object):
     def node2vec_yielder(self, window_size, neg_samples):
         for phr_id in range(len(self.train_data)):
             phr = self.train_data[phr_id]
+            print(phr)
+            print(self.vocab_words)
             # for each window position
             pos_context = []
             for w in range(-window_size, window_size + 1):

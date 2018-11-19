@@ -44,7 +44,7 @@ class Node2Vec:
             #     pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size,self.batch_size,self.neg_sample_num)
             for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
 
-                pos_u = Variable(torch.LongTensor(pos_u))
+                pos_u = Variable(torch.LongTensor([pos_u]))
                 pos_v = Variable(torch.LongTensor(pos_v))
                 neg_v = Variable(torch.LongTensor(neg_v))
 
