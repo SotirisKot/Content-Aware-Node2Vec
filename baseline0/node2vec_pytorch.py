@@ -64,7 +64,8 @@ class Node2Vec:
                     batch_aver_cost = batch_cost.cpu().item()
                     batch_costs = []
                     batch_num += 1
-                    print('Epoch: {}, Batch Loss: {}, num_batch: {}'.format(epoch, batch_aver_cost, batch_num))
+                    if batch_num == 100:
+                        print('Epoch: {}, Batch Loss: {}, num_batch: {}'.format(epoch, batch_aver_cost, batch_num))
                 # loss = model(pos_u, pos_v, neg_v, self.batch_size, self.window_size, self.neg_sample_num)
                 # loss.backward()
                 # optimizer.step()
