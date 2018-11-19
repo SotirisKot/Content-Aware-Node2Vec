@@ -72,6 +72,7 @@ class Utils(object):
         span = 2 * window_size + 1
         context = np.ndarray(shape=(batch_size, 2 * window_size), dtype=np.int64)
         labels = np.ndarray(shape=(batch_size), dtype=np.int64)
+        pos_pair = []
         if data_index + span > len(data):
             data_index = 0
             self.stop = False
@@ -83,13 +84,29 @@ class Utils(object):
             context[i, :] = buffer[:window_size] + buffer[window_size + 1:]
             labels[i] = buffer[window_size]
             if data_index + span > len(data):
+                buffer[:] = data[:span]
                 data_index = 0
                 self.stop = False
             else:
                 buffer = data[data_index:data_index + span]
-            pos_u.append(labels[i])
+            # pos_u.append(labels[i])
             for j in range(span - 1):
+                pos_u.append(labels[i])
                 pos_v.append(context[i, j])
-        neg_v = np.random.choice(self.sample_table, size=(batch_size*neg_samples))
+        neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size, neg_samples))
         return np.array(pos_u), np.array(pos_v), neg_v
 
+    def node2vec_yielder(self, window_size, neg_samples):
+        for phr_id in range(len(self.train_data)):
+            phr = self.train_data[phr_id]
+            # for each window position
+            pos_context = []
+            for w in range(-window_size, window_size + 1):
+                context_word_pos = phr_id + w
+                # make sure not jump out sentence
+                if context_word_pos < 0 or context_word_pos >= len(self.train_data) or phr_id == context_word_pos:
+                    continue
+                context_word_idx = self.train_data[context_word_pos]
+                pos_context.append(context_word_idx)
+            neg_v = np.random.choice(self.sample_table, size=(neg_samples)).tolist()
+            yield phr, pos_context, neg_v
