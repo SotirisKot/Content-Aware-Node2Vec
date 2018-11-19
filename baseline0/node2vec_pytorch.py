@@ -56,7 +56,7 @@ class Node2Vec:
                 optimizer.zero_grad()
                 instance_cost = model(pos_u, pos_v, neg_v)
                 batch_costs.append(instance_cost)
-                if len(batch_costs) == self.batch_size:
+                if len(batch_costs) % self.batch_size == 0:
                     batch_cost = sum(batch_costs) / float(len(batch_costs))
                     batch_cost.backward()
                     optimizer.step()
