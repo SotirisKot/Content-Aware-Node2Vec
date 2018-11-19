@@ -97,6 +97,23 @@ class Utils(object):
         neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size * neg_samples)).tolist()
         return pos_u, pos_v, neg_v
 
+    def node2vec_yielder(self, window_size, neg_samples):
+        for phr_id in range(len(self.train_data)):
+            phr = self.train_data[phr_id]
+            # for each window position
+            pos_context = []
+            for w in range(-window_size, window_size + 1):
+                context_word_pos = phr_id + w
+                # make sure not jump out sentence
+                if context_word_pos < 0 or context_word_pos >= len(self.train_data) or phr_id == context_word_pos:
+                    continue
+                context_word_idx = self.train_data[context_word_pos]
+                pos_context.append(context_word_idx)
+            neg_v = np.random.choice(self.sample_table, size=(neg_samples)).tolist()
+            yield phr, pos_context, neg_v
+
+
+
     def get_num_batches(self, batch_size):
         num_batches = len(self.train_data) / batch_size
         num_batches = int(math.ceil(num_batches))
@@ -135,10 +152,11 @@ if __name__ == "__main__":
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
     utils = Utils(walks, 2)
-    pos_u, pos_v, neg_v = utils.generate_batch(window_size=10, batch_size=32, neg_samples=5)
-    print(pos_u)
-    print(pos_v)
-    print(neg_v)
+    # pos_u, pos_v, neg_v = utils.generate_batch(window_size=10, batch_size=32, neg_samples=5)
+    for pos_u, pos_v in utils.node2vec_yielder(window_size=2):
+        print(pos_u)
+        print(pos_v)
+    # print(neg_v)
     # neg_v = Variable(torch.LongTensor(neg_v))
     # print(neg_v)
     # pos_u = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in pos_u]

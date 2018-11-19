@@ -46,8 +46,8 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        self.odir_checkpoint = '/home/paperspace/sotiris/thesis/'
-        self.odir_embeddings = '/home/paperspace/sotiris/thesis/'
+        self.odir_checkpoint = '...'
+        self.odir_embeddings = '...'
         self.output_file = output_file
         self.wv = {}
 
@@ -61,11 +61,12 @@ class Node2Vec:
         for epoch in range(self.epochs):
             batch_num = 0
             start = time.time()
-            while self.utils.stop:
-                pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size, self.batch_size, self.neg_sample_num)
-                pos_u = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)), requires_grad=False).cuda() for item in pos_u]
-                pos_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)), requires_grad=False).cuda() for item in pos_v]
-                neg_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)), requires_grad=False).cuda() for item in neg_v]
+            # while self.utils.stop:
+            for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
+                # pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size, self.batch_size, self.neg_sample_num)
+                pos_u = Variable(torch.LongTensor(phr2idx(self.node2phr[int(pos_u)], self.utils.word2idx)), requires_grad=False)
+                pos_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[int(item)], self.utils.word2idx)), requires_grad=False) for item in pos_v]
+                neg_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[int(item)], self.utils.word2idx)), requires_grad=False) for item in neg_v]
 
                 # if torch.cuda.is_available():
                 #     pos_u = [pos.cuda() for pos in pos_u]
