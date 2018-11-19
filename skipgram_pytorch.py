@@ -54,7 +54,7 @@ class SkipGram(nn.Module):
     def dot_product_sum(self, node_emb, ex_embeds, exp=False):
         node_emb = node_emb.unsqueeze(0).expand_as(ex_embeds)
         res = node_emb * ex_embeds
-        res = (res.sum(-1))
+        res = res.sum(-1) / float(res.size(0))
         if (exp):
             res = torch.exp(res) * (res > 0.).float()
         # in the paper they use sum not average. it is kind of strange
