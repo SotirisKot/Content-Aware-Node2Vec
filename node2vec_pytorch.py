@@ -60,7 +60,7 @@ class Node2Vec:
         total_batches = self.utils.get_num_batches(self.batch_size)
         for epoch in range(self.epochs):
             batch_num = 0
-            start = time.time()
+            # start = time.time()
             # while self.utils.stop:
             for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
                 # pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size, self.batch_size, self.neg_sample_num)
@@ -78,8 +78,8 @@ class Node2Vec:
                 optimizer.step()
                 if batch_num % 10 == 0:
                     print('Epoch: {}, Batch Loss: {}, num_batch: {}/{}'.format(epoch,loss.item(), batch_num, total_batches))
-                    print('It took', time.time() - start, 'seconds, for 10 batches.')
-                    start = time.time()
+                    # print('It took', time.time() - start, 'seconds, for 10 batches.')
+                    # start = time.time()
                 batch_num += 1
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
