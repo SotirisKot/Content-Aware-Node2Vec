@@ -37,7 +37,6 @@ class SkipGram(nn.Module):
             embed = torch.sum(embed_v, dim=0)
             pos_v_average.append(embed / float(len(phrase_idxs)))
         pos_v_average = torch.stack(pos_v_average)
-        pos_v_average = pos_v_average.view(pos_u_average.shape[0], -1, self.embedding_dim)
 
         neg_v_average = []
         for phrase_idxs in neg_v:
@@ -52,9 +51,9 @@ class SkipGram(nn.Module):
 
     def forward(self, pos_u, pos_v, neg_v):
         embed_u, embed_v, neg_embed_v = self.get_average_embedings(pos_u, pos_v, neg_v)
-        score = torch.bmm(embed_v,  embed_u.unsqueeze(2)).squeeze()
+        score = torch.mul(embed_u, embed_v)
+        score = torch.sum(score, dim=1)
         log_target = F.logsigmoid(score)
-        log_target = torch.sum(log_target, dim=1)
         neg_score = torch.bmm(neg_embed_v, embed_u.unsqueeze(2)).squeeze()
         sum_log_sampled = F.logsigmoid(-1 * neg_score)
         sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
