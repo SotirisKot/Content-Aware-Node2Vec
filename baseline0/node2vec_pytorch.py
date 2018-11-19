@@ -26,7 +26,8 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        self.odir = 'drive/My Drive/pytorch-node2vec-umls-relations/'
+        self.odir_checkpoint = '/home/paperspace/sotiris/thesis/'
+        self.odir_embeddings = '/home/paperspace/sotiris/thesis/'
         self.output_file = output_file
         self.wv = {}
 
@@ -37,17 +38,8 @@ class Node2Vec:
             model.cuda()
         optimizer = optim.SGD(model.parameters(), lr=0.025)
         for epoch in range(self.epochs):
-            #num_batches = self.utils.get_num_batches(batch_size=self.batch_size)
             batch_num = 0
-            while(self.utils.stop):#for batch_num in range(num_batches):
-                # if (not self.utils.data_ended):
-                #     pos_pairs = self.utils.get_batch(self.batch_size)
-                # else:
-                #     pos_pairs = self.utils.get_batch_from_deque(self.batch_size)
-
-                # neg_v = self.utils.get_neg_sample_batch(pos_pairs, self.neg_sample_num)
-                # pos_u = [pair[0] for pair in pos_pairs]
-                # pos_v = [pair[1] for pair in pos_pairs]
+            while self.utils.stop:
                 pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size,self.batch_size,self.neg_sample_num)
 
                 pos_u = Variable(torch.LongTensor(pos_u))
@@ -60,7 +52,7 @@ class Node2Vec:
                     neg_v = neg_v.cuda()
 
                 optimizer.zero_grad()
-                loss = model(pos_u, pos_v, neg_v, self.batch_size, self.window_size,self.neg_sample_num)
+                loss = model(pos_u, pos_v, neg_v, self.batch_size, self.window_size, self.neg_sample_num)
                 loss.backward()
                 optimizer.step()
                 if batch_num % 5000 == 0:
@@ -68,8 +60,7 @@ class Node2Vec:
                 batch_num += 1
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
-            save_checkpoint(state, filename=self.odir + 'isa_undirected_checkpoint_epoch_{}.pth.tar'.format(epoch + 1))
+            save_checkpoint(state, filename=self.odir_checkpoint + 'isa_undirected_checkpoint_epoch_{}.pth.tar'.format(epoch + 1))
             self.utils.stop = True
-            #self.utils.data_ended = False
         print("Optimization Finished!")
-        self.wv = model.save_embeddings(file_name=self.output_file, idx2word=self.utils.vocab_words, use_cuda=True)
+        self.wv = model.save_embeddings(file_name=self.odir_embeddings + self.output_file, idx2word=self.utils.vocab_words, use_cuda=True)
