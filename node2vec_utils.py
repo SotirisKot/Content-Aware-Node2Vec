@@ -89,10 +89,12 @@ class Utils(object):
                 self.stop = False
             else:
                 buffer = data[data_index:data_index + span]
-            pos_u.append(labels[i])
+            #pos_u.append(labels[i])
             for j in range(span - 1):
+                pos_u.append(labels[i])
                 pos_v.append(context[i, j])
-        neg_v = np.random.choice(self.sample_table, size=(batch_size * neg_samples)).tolist()
+        #neg_v = np.random.choice(self.sample_table, size=(batch_size * neg_samples)).tolist()
+        neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size * neg_samples)).tolist()
         return pos_u, pos_v, neg_v
 
     def get_num_batches(self, batch_size):
@@ -105,6 +107,7 @@ bioclean = lambda t: ' '.join(re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
                                      t.replace('"', '').replace('/', '').replace('\\', '').replace("'",
                                                                                                    '').strip().lower()).split()).strip()
 
+
 def get_index(w, vocab):
     try:
         return vocab[w]
@@ -115,6 +118,7 @@ def get_index(w, vocab):
 def phr2idx(phr, word_vocab):
     p = [get_index(t, word_vocab) for t in phr.split()]
     return p
+
 
 def clean_dictionary(phrase_dic):
     for nodeid, phrase in phrase_dic.items():
@@ -131,11 +135,10 @@ if __name__ == "__main__":
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
     utils = Utils(walks, 2)
-    pos_u, pos_v, neg_v = utils.generate_batch1(batch_size=32, num_skips=2, skip_window=10,neg_samples=5)
-    # print(batch)
-    # print(labels)
-    # for batch in utils.node2vec_yielder(2,5):
-    #     print(batch)
+    pos_u, pos_v, neg_v = utils.generate_batch(window_size=10, batch_size=32, neg_samples=5)
+    print(pos_u)
+    print(pos_v)
+    print(neg_v)
     # neg_v = Variable(torch.LongTensor(neg_v))
     # print(neg_v)
     # pos_u = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in pos_u]

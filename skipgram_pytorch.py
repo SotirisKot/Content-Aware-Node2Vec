@@ -37,7 +37,7 @@ class SkipGram(nn.Module):
             embed = torch.sum(embed_v, dim=0)
             pos_v_average.append(embed / float(len(phrase_idxs)))
         pos_v_average = torch.stack(pos_v_average)
-        pos_v_average = pos_v_average.view(pos_u_average.shape[0], -1, self.embedding_dim)
+        # pos_v_average = pos_v_average.view(pos_u_average.shape[0], -1, self.embedding_dim)
 
         neg_v_average = []
         for phrase_idxs in neg_v:
@@ -52,23 +52,24 @@ class SkipGram(nn.Module):
 
     def forward(self, pos_u, pos_v, neg_v):
         embed_u, embed_v, neg_embed_v = self.get_average_embedings(pos_u, pos_v, neg_v)
-        embed = embed_u.unsqueeze(2)
-        pos_score = torch.bmm(embed_v, embed).squeeze()
-        pos_score = torch.sum(pos_score, dim=1)
-        neg_score = torch.bmm(neg_embed_v, embed).squeeze()
+        # embed = embed_u.unsqueeze(2)
+        # pos_score = torch.bmm(embed_v, embed).squeeze()
+        # pos_score = torch.sum(pos_score, dim=1)
+        # neg_score = torch.bmm(neg_embed_v, embed).squeeze()
+        # neg_score = torch.exp(neg_score)
+        # neg_score = torch.sum(neg_score, dim=1)
+        # neg_score = - torch.log(neg_score)
+        # loss = - (neg_score.sum() + pos_score.sum())
+        # return loss / self.batch_size
+        score = torch.mul(embed_u, embed_v)
+        score = torch.sum(score, dim=1)
+        # log_target = F.logsigmoid(score)
+        neg_score = torch.bmm(neg_embed_v, embed_u.unsqueeze(2)).squeeze()
         neg_score = torch.exp(neg_score)
         neg_score = torch.sum(neg_score, dim=1)
-        neg_score = - torch.log(neg_score)
-        loss = - (neg_score.sum() + pos_score.sum())
-        return loss / self.batch_size
-        # score = torch.mul(embed_u, embed_v)
-        # score = torch.sum(score, dim=1)
-        # log_target = F.logsigmoid(score)
-        # neg_score = torch.bmm(neg_embed_v, embed_u.unsqueeze(2)).squeeze()
-        # sum_log_sampled = F.logsigmoid(-neg_score)
-        # sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
-        # loss = log_target + sum_log_sampled
-        # return -1 * loss.sum() / self.batch_size
+        neg_score = - torch.log(1 + neg_score)
+        loss = score + neg_score
+        return -1 * loss.sum() / self.batch_size
         # score = torch.bmm(embed_v, embed_u.unsqueeze(2)).squeeze()
         # log_target = F.logsigmoid(score)
         # log_target = torch.sum(log_target, dim=1)
