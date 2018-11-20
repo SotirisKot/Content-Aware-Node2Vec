@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 np.random.seed(12345)
 data_index = 0
+walk_index = 0
 
 
 class Utils(object):
@@ -37,9 +38,10 @@ class Utils(object):
         for word, _ in count:
             dictionary[word] = len(dictionary)
         data = []
-        for word in vocabulary:
-            index = dictionary[word]
-            data.append(index)
+        for walk in self.walks:
+            for idx, nodeid in enumerate(walk):
+                index = dictionary[nodeid]
+                walk[idx] = index
         reversed_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
         return data, count, reversed_dictionary
 
@@ -60,22 +62,24 @@ class Utils(object):
         neg_v = np.random.choice(self.sample_table, size=(len(pos_pairs), num_neg_samples)).tolist()
         return neg_v
 
-    def get_num_batches(self, batch_size):
-        num_batches = len(self.word_pairs) / batch_size
-        print(num_batches)
-        num_batches = int(math.ceil(num_batches))
-        return num_batches
+    def get_walk(self):
+        global walk_index
+        try:
+            walk = self.walks[walk_index]
+            walk_index += 1
+            return walk
+        except:
+            print('No more walks..')
+            self.stop = False
 
     def generate_batch(self, window_size, batch_size, neg_samples):
-        data = self.train_data
+        data = self.get_walk()
         global data_index
         span = 2 * window_size + 1
         context = np.ndarray(shape=(batch_size, 2 * window_size), dtype=np.int64)
         labels = np.ndarray(shape=(batch_size), dtype=np.int64)
-        pos_pair = []
         if data_index + span > len(data):
             data_index = 0
-            self.stop = False
         buffer = data[data_index:data_index + span]
         pos_u = []
         pos_v = []
@@ -84,16 +88,26 @@ class Utils(object):
             context[i, :] = buffer[:window_size] + buffer[window_size + 1:]
             labels[i] = buffer[window_size]
             if data_index + span > len(data):
-                buffer[:] = data[:span]
                 data_index = 0
-                self.stop = False
+                data = self.get_walk()
+                if self.stop:
+                    buffer[:] = data[:span]
+                # print(data)
             else:
                 buffer = data[data_index:data_index + span]
-            # pos_u.append(labels[i])
-            for j in range(span - 1):
+            if self.stop:
                 pos_u.append(labels[i])
-                pos_v.append(context[i, j])
-        neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size, neg_samples))
+                for j in range(span - 1):
+                    # pos_u.append(labels[i])
+                    pos_v.append(context[i, j])
+            else:
+                pos_u.append(labels[i])
+                for j in range(span - 1):
+                    # pos_u.append(labels[i])
+                    pos_v.append(context[i, j])
+                break
+        neg_v = np.random.choice(self.sample_table, size=(len(pos_u) * neg_samples)).tolist()
+        # neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size * neg_samples)).tolist()
         return np.array(pos_u), np.array(pos_v), neg_v
 
     def node2vec_yielder(self, window_size, neg_samples):

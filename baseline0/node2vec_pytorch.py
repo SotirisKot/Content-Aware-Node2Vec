@@ -39,10 +39,8 @@ class Node2Vec:
         optimizer = optim.SGD(model.parameters(), lr=0.025)
         for epoch in range(self.epochs):
             batch_num = 0
-            batch_costs = []
-            # while self.utils.stop:
-            #     pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size,self.batch_size,self.neg_sample_num)
-            for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
+            while self.utils.stop:
+                pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size,self.batch_size,self.neg_sample_num)
 
                 pos_u = Variable(torch.LongTensor([pos_u]))
                 pos_v = Variable(torch.LongTensor(pos_v))
@@ -54,23 +52,12 @@ class Node2Vec:
                     neg_v = neg_v.cuda()
 
                 optimizer.zero_grad()
-                instance_cost = model(pos_u, pos_v, neg_v)
-                batch_costs.append(instance_cost)
-                if len(batch_costs) == self.batch_size:
-                    batch_cost = sum(batch_costs) / float(len(batch_costs))
-                    batch_cost.backward()
-                    optimizer.step()
-                    optimizer.zero_grad()
-                    batch_aver_cost = batch_cost.cpu().item()
-                    batch_costs = []
-                    print('Epoch: {}, Batch Loss: {}, num_batch: {}'.format(epoch, batch_aver_cost, batch_num))
-                    batch_num += 1
-                # loss = model(pos_u, pos_v, neg_v, self.batch_size, self.window_size, self.neg_sample_num)
-                # loss.backward()
-                # optimizer.step()
-                # if batch_num % 5000 == 0:
-                #     print('Batch Loss: {}, num_batch: {} '.format(loss.item(), batch_num))
-                # batch_num += 1
+                loss = model(pos_u, pos_v, neg_v,self.neg_sample_num)
+                loss.backward()
+                optimizer.step()
+                if batch_num % 5000 == 0:
+                    print('Batch Loss: {}, num_batch: {} '.format(loss.item(), batch_num))
+                batch_num += 1
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             save_checkpoint(state, filename=self.odir_checkpoint + 'isa_undirected_checkpoint_epoch_{}.pth.tar'.format(epoch + 1))
