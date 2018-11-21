@@ -42,7 +42,7 @@ class Node2Vec:
             while self.utils.stop:
                 pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size,self.batch_size,self.neg_sample_num)
 
-                pos_u = Variable(torch.LongTensor([pos_u]))
+                pos_u = Variable(torch.LongTensor(pos_u))
                 pos_v = Variable(torch.LongTensor(pos_v))
                 neg_v = Variable(torch.LongTensor(neg_v))
 
@@ -52,7 +52,7 @@ class Node2Vec:
                     neg_v = neg_v.cuda()
 
                 optimizer.zero_grad()
-                loss = model(pos_u, pos_v, neg_v,self.neg_sample_num)
+                loss = model(pos_u, pos_v, neg_v, self.neg_sample_num)
                 loss.backward()
                 optimizer.step()
                 if batch_num % 5000 == 0:

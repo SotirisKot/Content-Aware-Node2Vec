@@ -106,7 +106,7 @@ class Utils(object):
                     # pos_u.append(labels[i])
                     pos_v.append(context[i, j])
                 break
-        neg_v = np.random.choice(self.sample_table, size=(len(pos_u), neg_samples))
+        neg_v = np.random.choice(self.sample_table, size=(len(pos_u) * neg_samples))
         # neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size * neg_samples)).tolist()
         return np.array(pos_u), np.array(pos_v), neg_v
 
