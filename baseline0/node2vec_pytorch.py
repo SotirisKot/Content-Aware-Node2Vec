@@ -26,8 +26,8 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        self.odir_checkpoint = '/home/paperspace/sotiris/thesis/'
-        self.odir_embeddings = '/home/paperspace/sotiris/thesis/'
+        self.odir_checkpoint = '/home/sotiris/'
+        self.odir_embeddings = '/home/sotiris/'
         self.output_file = output_file
         self.wv = {}
 
