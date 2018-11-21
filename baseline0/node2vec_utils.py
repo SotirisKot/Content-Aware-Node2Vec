@@ -106,7 +106,7 @@ class Utils(object):
                     # pos_u.append(labels[i])
                     pos_v.append(context[i, j])
                 break
-        neg_v = np.random.choice(self.sample_table, size=(len(pos_u) * neg_samples)).tolist()
+        neg_v = np.random.choice(self.sample_table, size=(len(pos_u), neg_samples))
         # neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size * neg_samples)).tolist()
         return np.array(pos_u), np.array(pos_v), neg_v
 
@@ -124,3 +124,63 @@ class Utils(object):
                 pos_context.append(context_word_idx)
             neg_v = np.random.choice(self.sample_table, size=(neg_samples)).tolist()
             yield phr, pos_context, neg_v
+
+if __name__ == "__main__":
+    walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
+             ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
+             ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
+    utils = Utils(walks, 2)
+    pos_u, pos_v, neg_v = utils.generate_batch(window_size=5, batch_size=32, neg_samples=5)
+    print(pos_u)
+    print(pos_v.reshape(len(pos_u), 10))
+    # for pos_u, pos_v, neg_v in utils.node2vec_yielder(window_size=4, neg_samples=3):
+    #     print(pos_u)
+    #     print(pos_v)
+    # print(neg_v)
+    # neg_v = Variable(torch.LongTensor(neg_v))
+    # print(neg_v)
+    # pos_u = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in pos_u]
+    # print(pos_u)
+    # pos_v = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item_list in pos_v for item in item_list]
+    # print(pos_v)
+    # neg_v = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in neg_v]
+    # print(neg_v)
+    # print(pos_u)
+    # print(pos_v)
+    # print(neg_v)
+    # exit()
+    # # #print(neg_v)
+    # pos = [Variable(torch.LongTensor(pos_ind), requires_grad=False) for pos_ind in pos_u]
+    # pos_v = [Variable(torch.LongTensor(pos_ind), requires_grad=False) for pos_ind in pos_v]
+    # neg_v = [Variable(torch.LongTensor(item_list), requires_grad=False) for item_list in neg_v]
+    # model = SkipGram(utils.vocabulary_size, 128, neg_sample_num=2)
+    # # # print(pos)
+    # # # print(pos_v)
+    # # # print(neg_v)
+    # loss = model(pos, pos_v, neg_v, 4)
+    # neg_v = [phr2idx(utils.phrase_dic[item], utils.word2idx) for item in neg_v]
+    # print(neg_v)
+    # print(neg_v.shape)
+
+    # words_neg_sample = []
+    # for item_list in neg_v:
+    #     for item in item_list:
+    #         words_neg_sample.append(phr2idx(utils.phrase_dic[item], utils.word2idx))
+    # print('hiii: ',words_neg_sample)
+    # for idx,item_list in enumerate(neg_v):
+    #     print(idx,item_list)
+    #     for idx1, i in enumerate(item_list):
+    #         neg_v[idx][idx1] = phr2idx(utils.phrase_dic[i], utils.word2idx)
+    # print(neg_v)
+    # print(neg_v.shape)
+    # neg_v = np.asarray(neg_v)
+
+    # print(neg_v)
+    # print(neg_v.shape)
+    # print(pos_u)
+    # print(pos_v)
+    # print('neg_v:' ,neg_v[0][0])
+    # print(neg_v.shape)
+    # print(utils.word2idx)
+    # exit()
+    # loss = model(pos_u, pos_v, neg_v, 4)
