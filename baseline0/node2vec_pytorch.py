@@ -41,24 +41,25 @@ class Node2Vec:
             batch_num = 0
             batch_costs = []
             while self.utils.stop:
-                for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(window_size=self.window_size, neg_samples=self.neg_sample_num):
-                    pos_u = Variable(torch.LongTensor([pos_u]))
-                    pos_v = Variable(torch.LongTensor(pos_v))
-                    neg_v = Variable(torch.LongTensor(neg_v))
+                pos_u, pos_v, neg_v, batch_size = self.utils.generate_batch(self.window_size,self.batch_size,self.neg_sample_num)
 
-                    if torch.cuda.is_available():
-                        pos_u = pos_u.cuda()
-                        pos_v = pos_v.cuda()
-                        neg_v = neg_v.cuda()
+                pos_u = Variable(torch.LongTensor(pos_u))
+                pos_v = Variable(torch.LongTensor(pos_v))
+                neg_v = Variable(torch.LongTensor(neg_v))
 
-                    optimizer.zero_grad()
-                    loss = model(pos_u, pos_v, neg_v, self.neg_sample_num)
-                    loss.backward()
-                    optimizer.step()
-                    batch_costs.append(loss.cpu().item())
-                    if batch_num % 5000 == 0:
-                        print('Batch Average Loss: {}, num_batch: {} '.format(sum(batch_costs)/float(len(batch_costs)), batch_num))
-                    batch_num += 1
+                if torch.cuda.is_available():
+                    pos_u = pos_u.cuda()
+                    pos_v = pos_v.cuda()
+                    neg_v = neg_v.cuda()
+
+                optimizer.zero_grad()
+                loss = model(pos_u, pos_v, neg_v, batch_size)
+                loss.backward()
+                optimizer.step()
+                batch_costs.append(loss.cpu().item())
+                if batch_num % 5000 == 0:
+                    print('Batch Average Loss: {}, num_batch: {} '.format(sum(batch_costs)/float(len(batch_costs)), batch_num))
+                batch_num += 1
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             save_checkpoint(state, filename=self.odir_checkpoint + 'isa_undirected_checkpoint_epoch_{}.pth.tar'.format(epoch + 1))

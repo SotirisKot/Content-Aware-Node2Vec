@@ -4,6 +4,8 @@ from collections import deque
 import math
 import os
 import random
+
+from torch.utils.data import Dataset
 from tqdm import tqdm
 
 np.random.seed(12345)
@@ -18,7 +20,7 @@ class Utils(object):
         self.walks = walks
         data, self.frequencies, self.vocab_words = self.build_dataset(self.walks)
         self.train_data = data
-        print(self.walks)
+        self.current_walk = self.get_walk()
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
 
@@ -74,42 +76,42 @@ class Utils(object):
             self.stop = False
 
     def generate_batch(self, window_size, batch_size, neg_samples):
-        data = self.get_walk()
         global data_index
         span = 2 * window_size + 1
         context = np.ndarray(shape=(batch_size, 2 * window_size), dtype=np.int64)
         labels = np.ndarray(shape=(batch_size), dtype=np.int64)
-        if data_index + span > len(data):
+        if data_index + span > len(self.current_walk):
             data_index = 0
-        buffer = data[data_index:data_index + span]
+        buffer = self.current_walk[data_index:data_index + span]
         pos_u = []
         pos_v = []
+        batch_len = 0
         for i in range(batch_size):
             data_index += 1
             context[i, :] = buffer[:window_size] + buffer[window_size + 1:]
             labels[i] = buffer[window_size]
-            if data_index + span > len(data):
+            if data_index + span > len(self.current_walk):
                 data_index = 0
-                data = self.get_walk()
+                self.current_walk = self.get_walk()
                 if self.stop:
-                    buffer[:] = data[:span]
-                # print(data)
+                    buffer[:] = self.current_walk[:span]
             else:
-                buffer = data[data_index:data_index + span]
+                buffer = self.current_walk[data_index:data_index + span]
             if self.stop:
-                pos_u.append(labels[i])
+                batch_len += 1
+                # pos_u.append(labels[i])
                 for j in range(span - 1):
-                    # pos_u.append(labels[i])
+                    pos_u.append(labels[i])
                     pos_v.append(context[i, j])
             else:
-                pos_u.append(labels[i])
+                batch_len += 1
+                # pos_u.append(labels[i])
                 for j in range(span - 1):
-                    # pos_u.append(labels[i])
+                    pos_u.append(labels[i])
                     pos_v.append(context[i, j])
                 break
-        neg_v = np.random.choice(self.sample_table, size=(len(pos_u) * neg_samples))
-        # neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size * neg_samples)).tolist()
-        return np.array(pos_u), np.array(pos_v), neg_v
+        neg_v = np.random.choice(self.sample_table, size=(batch_len * 2 * window_size, neg_samples))
+        return np.array(pos_u), np.array(pos_v), neg_v, batch_len
 
     def node2vec_yielder(self, window_size, neg_samples):
         walk = self.get_walk()
@@ -127,24 +129,24 @@ class Utils(object):
                 neg_v = np.random.choice(self.sample_table, size=(neg_samples)).tolist()
                 yield phr, pos_context, neg_v
 
-
-
 if __name__ == "__main__":
 
     walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
+             ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
     utils = Utils(walks, 2)
-    # pos_u, pos_v, neg_v = utils.generate_batch(window_size=2, batch_size=10, neg_samples=5)
+    # pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=2, batch_size=32, neg_samples=5)
     # print(pos_u)
     # print(len(pos_u))
-    # print(pos_v.reshape(len(pos_u), 4))
-    # print(neg_v.reshape(len(pos_u), 5))
+    # print(batch_size)
+    # print(len(pos_v))
+    # print(len(neg_v))
     while utils.stop:
-        for pos_u, pos_v, neg_v in utils.node2vec_yielder(window_size=4, neg_samples=3):
-            print(pos_u)
-            print(pos_v)
+        pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=2, batch_size=4, neg_samples=5)
+        print(pos_u)
+        print(pos_v)
     # print(neg_v)
     # neg_v = Variable(torch.LongTensor(neg_v))
     # print(neg_v)
