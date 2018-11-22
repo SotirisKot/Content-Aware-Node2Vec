@@ -176,14 +176,16 @@ if __name__ == "__main__":
     # pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=2, batch_size=4, neg_samples=5)
     # print(pos_u)
     # print(pos_v)
-    # for pos_u, pos_v, neg_v in utils.node2vec_yielder(window_size=4, neg_samples=3):
-    #     pos_u = Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(pos_u)], utils.word2idx)),
-    #                      requires_grad=False)
-    #     pos_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
-    #                       requires_grad=False) for item in pos_v]
-    #     neg_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
-    #                       requires_grad=False) for item in neg_v]
-
+    print(utils.idx2word.items())
+    exit()
+    for pos_u, pos_v, neg_v in utils.node2vec_yielder(window_size=2, neg_samples=3):
+        pos_u = Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(pos_u)], utils.word2idx)),
+                         requires_grad=False)
+        pos_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
+                          requires_grad=False) for item in pos_v]
+        neg_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
+                          requires_grad=False) for item in neg_v]
+        print(pos_u, pos_v)
     # print(neg_v)
     # neg_v = Variable(torch.LongTensor(neg_v))
     # print(neg_v)

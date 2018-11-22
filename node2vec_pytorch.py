@@ -69,18 +69,18 @@ class Node2Vec:
             #                                                                 self.neg_sample_num)
             for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
 
-                pos_u = Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(pos_u)], self.utils.word2idx)),
-                                 requires_grad=False).cuda()
-                pos_v = [Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)),
+                phr = Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(pos_u)], self.utils.word2idx)),
+                                  requires_grad=False).cuda()
+                phr_v = [Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)),
                                   requires_grad=False).cuda() for item in pos_v]
-                neg_v = [Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)),
+                phr_neg_v = [Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)),
                                   requires_grad=False).cuda() for item in neg_v]
                 optimizer.zero_grad()
-                loss = model(pos_u, pos_v, neg_v)
+                loss = model(phr, phr_v, phr_neg_v)
                 loss.backward()
                 optimizer.step()
                 instance_costs.append(loss.cpu().item())
-                if instance_num % 5000 == 0:
+                if len(instance_costs) % 5000 == 0:
                     print('Instances Average Loss: {}, instances: {}/{} '.format(sum(instance_costs) / float(len(instance_costs)),
                                                                              instance_num, total_batches))
                     print('It took', time.time()-start, 'seconds.')
