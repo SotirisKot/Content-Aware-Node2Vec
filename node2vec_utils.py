@@ -121,7 +121,7 @@ class Utils(object):
         return pos_u, pos_v, neg_v, batch_len
 
     def node2vec_yielder(self, window_size, neg_samples):
-        for walk in tqdm(self.walks):
+        for walk in self.walks:
             for idx, phr in enumerate(walk):
                 # for each window position
                 pos_context = []
