@@ -17,8 +17,7 @@ walk_index = 0
 
 class Utils(object):
     def __init__(self, walks, window_size):
-        self.phrase_dic = clean_dictionary(pickle.load(open('/home/paperspace/sotiris/thesis/relation_utilities/isa'
-                                                            '/isa_reversed_dic.p', 'rb')))
+        self.phrase_dic = clean_dictionary(pickle.load(open('relation_utilities/isa/isa_reversed_dic.p', 'rb')))
         self.stop = True
         self.window_size = window_size
         self.walks = walks
@@ -26,7 +25,7 @@ class Utils(object):
         self.vocabulary_size = len(self.word2idx)
         print("Total words: ", self.vocabulary_size)
         self.train_data = data
-        self.current_walk = self.get_walk()
+        # self.current_walk = self.get_walk()
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
 
@@ -122,8 +121,7 @@ class Utils(object):
         return pos_u, pos_v, neg_v, batch_len
 
     def node2vec_yielder(self, window_size, neg_samples):
-        walk = self.get_walk()
-        if self.stop:
+        for walk in tqdm(self.walks):
             for idx, phr in enumerate(walk):
                 # for each window position
                 pos_context = []
@@ -178,9 +176,14 @@ if __name__ == "__main__":
     # pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=2, batch_size=4, neg_samples=5)
     # print(pos_u)
     # print(pos_v)
-    for pos_u, pos_v, neg_v in utils.node2vec_yielder(window_size=4, neg_samples=3):
-        print(pos_u)
-        print(pos_v)
+    # for pos_u, pos_v, neg_v in utils.node2vec_yielder(window_size=4, neg_samples=3):
+    #     pos_u = Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(pos_u)], utils.word2idx)),
+    #                      requires_grad=False)
+    #     pos_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
+    #                       requires_grad=False) for item in pos_v]
+    #     neg_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
+    #                       requires_grad=False) for item in neg_v]
+
     # print(neg_v)
     # neg_v = Variable(torch.LongTensor(neg_v))
     # print(neg_v)
