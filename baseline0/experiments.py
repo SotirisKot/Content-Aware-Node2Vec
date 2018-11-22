@@ -27,7 +27,7 @@ def parse_args():
     parser.add_argument('--dimensions', type=int, default=128,
                         help='Number of dimensions. Default is 128.')
 
-    parser.add_argument('--walk-length', type=int, default=40,
+    parser.add_argument('--walk-length', type=int, default=80,
                         help='Length of walk per source. Default is 80.')
 
     parser.add_argument('--num-walks', type=int, default=10,
@@ -92,7 +92,7 @@ def read_graph(file, get_connected_graph=True, remove_selfloops=True):
 def learn_embeddings(walks):
     # walks = [map(str, walk) for walk in walks] # this will work on python2 but not in python3
     print('Creating walk corpus..')
-    #walks = [list(map(str, walk)) for walk in walks]  # this is for python3
+    walks = [list(map(str, walk)) for walk in walks]  # this is for python3
     # odir = '/home/paperspace/sotiris/thesis/'
     # with open('{}.p'.format(os.path.join(odir, 'walks')), 'wb') as dump_file:
     #     pickle.dump(walks, dump_file)
@@ -263,16 +263,12 @@ def load_embeddings(file):
 def main(args):
     # nx_G = read_graph(file=args.input, get_connected_graph=False, remove_selfloops=True)
     # print(nx_G.number_of_nodes(), nx_G.number_of_edges())
-    train_pos = pickle.load(open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
-                                 '-train-test-splits/isa_train_pos.p', 'rb'))
-    test_pos = pickle.load(open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
-                                '-train-test-splits/isa_test_pos.p', 'rb'))
+    train_pos = pickle.load(open('drive/My Drive/pytorch-node2vec-umls-relations/facebook-dataset-train-test-splits/facebook_train_pos.p', 'rb'))
+    test_pos = pickle.load(open('drive/My Drive/pytorch-node2vec-umls-relations/facebook-dataset-train-test-splits/facebook_test_pos.p', 'rb'))
     train_neg = pickle.load(
-        open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
-             '-train-test-splits/isa_train_neg.p', 'rb'))
+        open('drive/My Drive/pytorch-node2vec-umls-relations/facebook-dataset-train-test-splits/facebook_train_neg.p', 'rb'))
     test_neg = pickle.load(
-        open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
-             '-train-test-splits/isa_test_neg.p', 'rb'))
+        open('drive/My Drive/pytorch-node2vec-umls-relations/facebook-dataset-train-test-splits/facebook_test_neg.p', 'rb'))
     # train_pos, train_neg, test_pos, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
     # train_neg, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
     print('Number of positive training samples: ', len(train_pos))
@@ -280,18 +276,14 @@ def main(args):
     print('Number of positive testing samples: ', len(test_pos))
     print('Number of negative testing samples: ', len(test_neg))
     train_graph = read_graph(
-        file='/home/paperspace/sotiris/thesis/isa-undirected-dataset-train-test-splits/isa_train_graph_undirected.edgelist',
+        file='drive/My Drive/pytorch-node2vec-umls-relations/facebook-dataset-train-test-splits/facebook_train_graph.edgelist',
         get_connected_graph=False, remove_selfloops=False)
     print(
         'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
     print('Number of connected components: ', nx.number_connected_components(train_graph))
-    # G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
-    # G.preprocess_transition_probs()
-    # walks = G.simulate_walks(args.num_walks, args.walk_length)
-    walks = pickle.load(open('/home/paperspace/sotiris/thesis/walks.p', 'rb'))
-    # walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
-    #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
-    #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
+    G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
+    G.preprocess_transition_probs()
+    walks = G.simulate_walks(args.num_walks, args.walk_length)
     node_embeddings = learn_embeddings(walks)
     # node_embeddings = load_embeddings('isa_link_predict.emb')
 

@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument('--num-walks', type=int, default=5,
                         help='Number of walks per source. Default is 10.')
 
-    parser.add_argument('--window-size', type=int, default=10,
+    parser.add_argument('--window-size', type=int, default=5,
                         help='Context size for optimization. Default is 10.')
 
     parser.add_argument('--iter', default=1, type=int,
