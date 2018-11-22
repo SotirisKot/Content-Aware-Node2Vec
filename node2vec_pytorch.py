@@ -85,7 +85,7 @@ class Node2Vec:
                                                                              instance_num, total_batches))
                     print('It took', time.time()-start, 'seconds.')
                     start = time.time()
-                    instance_num += 1
+                instance_num += 1
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             save_checkpoint(state,
