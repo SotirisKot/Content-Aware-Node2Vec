@@ -20,7 +20,7 @@ class Utils(object):
         self.walks = walks
         data, self.frequencies, self.vocab_words = self.build_dataset(self.walks)
         self.train_data = data
-        self.current_walk = self.get_walk()
+        # self.current_walk = self.get_walk()
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
 
@@ -144,13 +144,9 @@ if __name__ == "__main__":
     # print(len(neg_v))
     print(utils.vocab_words)
     while utils.stop:
-        pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=2, batch_size=4, neg_samples=5)
-        print(pos_u)
-        print(len(pos_u))
-        print(len(neg_v))
-        print(pos_v.reshape(len(pos_u), -1))
-        print(neg_v)
-        exit()
+        for pos_u, pos_v, neg_v in utils.node2vec_yielder(2, 4):
+            print(pos_u)
+            print(pos_v)
     # print(neg_v)
     # neg_v = Variable(torch.LongTensor(neg_v))
     # print(neg_v)

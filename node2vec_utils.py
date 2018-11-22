@@ -26,7 +26,7 @@ class Utils(object):
         self.vocabulary_size = len(self.word2idx)
         print("Total words: ", self.vocabulary_size)
         self.train_data = data
-        self.current_walk = self.get_walk()
+        # self.current_walk = self.get_walk()
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
 
@@ -122,7 +122,8 @@ class Utils(object):
         return pos_u, pos_v, neg_v, batch_len
 
     def node2vec_yielder(self, window_size, neg_samples):
-        for walk in self.walks:
+        walk = self.get_walk()
+        if self.stop:
             for idx, phr in enumerate(walk):
                 # for each window position
                 pos_context = []
