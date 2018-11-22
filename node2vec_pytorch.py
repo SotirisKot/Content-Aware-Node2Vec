@@ -71,9 +71,9 @@ class Node2Vec:
 
                     pos_u = [Variable(torch.LongTensor(phr2idx(self.node2phr[int(pos_u)], self.utils.word2idx)),
                                       requires_grad=False).cuda()]
-                    pos_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)),
+                    pos_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[int(item)], self.utils.word2idx)),
                                       requires_grad=False).cuda() for item in pos_v]
-                    neg_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)),
+                    neg_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[int(item)], self.utils.word2idx)),
                                       requires_grad=False).cuda() for item in neg_v]
 
                     # if torch.cuda.is_available():
