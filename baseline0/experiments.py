@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--walk-length', type=int, default=80,
                         help='Length of walk per source. Default is 80.')
 
-    parser.add_argument('--num-walks', type=int, default=10,
+    parser.add_argument('--num-walks', type=int, default=5,
                         help='Number of walks per source. Default is 10.')
 
     parser.add_argument('--window-size', type=int, default=10,
@@ -263,12 +263,16 @@ def load_embeddings(file):
 def main(args):
     # nx_G = read_graph(file=args.input, get_connected_graph=False, remove_selfloops=True)
     # print(nx_G.number_of_nodes(), nx_G.number_of_edges())
-    train_pos = pickle.load(open('drive/My Drive/pytorch-node2vec-umls-relations/facebook-dataset-train-test-splits/facebook_train_pos.p', 'rb'))
-    test_pos = pickle.load(open('drive/My Drive/pytorch-node2vec-umls-relations/facebook-dataset-train-test-splits/facebook_test_pos.p', 'rb'))
+    train_pos = pickle.load(open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
+                                 '-train-test-splits/isa_train_pos.p', 'rb'))
+    test_pos = pickle.load(open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
+                                '-train-test-splits/isa_test_pos.p', 'rb'))
     train_neg = pickle.load(
-        open('drive/My Drive/pytorch-node2vec-umls-relations/facebook-dataset-train-test-splits/facebook_train_neg.p', 'rb'))
+        open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
+             '-train-test-splits/isa_train_neg.p', 'rb'))
     test_neg = pickle.load(
-        open('drive/My Drive/pytorch-node2vec-umls-relations/facebook-dataset-train-test-splits/facebook_test_neg.p', 'rb'))
+        open('/home/paperspace/sotiris/thesis/isa-undirected-dataset'
+             '-train-test-splits/isa_test_neg.p', 'rb'))
     # train_pos, train_neg, test_pos, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
     # train_neg, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
     print('Number of positive training samples: ', len(train_pos))
@@ -276,7 +280,8 @@ def main(args):
     print('Number of positive testing samples: ', len(test_pos))
     print('Number of negative testing samples: ', len(test_neg))
     train_graph = read_graph(
-        file='drive/My Drive/pytorch-node2vec-umls-relations/facebook-dataset-train-test-splits/facebook_train_graph.edgelist',
+        file='/home/paperspace/sotiris/thesis/isa-undirected-dataset-train-test-splits/isa_train_graph_undirected'
+             '.edgelist',
         get_connected_graph=False, remove_selfloops=False)
     print(
         'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
@@ -285,7 +290,6 @@ def main(args):
     G.preprocess_transition_probs()
     walks = G.simulate_walks(args.num_walks, args.walk_length)
     node_embeddings = learn_embeddings(walks)
-    # node_embeddings = load_embeddings('isa_link_predict.emb')
 
     # for training
     train_pos_edge_embs = get_edge_embeddings(train_pos, node_embeddings)

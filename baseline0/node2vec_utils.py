@@ -99,18 +99,18 @@ class Utils(object):
                 buffer = self.current_walk[data_index:data_index + span]
             if self.stop:
                 batch_len += 1
-                # pos_u.append(labels[i])
+                pos_u.append(labels[i])
                 for j in range(span - 1):
-                    pos_u.append(labels[i])
+                    # pos_u.append(labels[i])
                     pos_v.append(context[i, j])
             else:
                 batch_len += 1
-                # pos_u.append(labels[i])
+                pos_u.append(labels[i])
                 for j in range(span - 1):
-                    pos_u.append(labels[i])
+                    # pos_u.append(labels[i])
                     pos_v.append(context[i, j])
                 break
-        neg_v = np.random.choice(self.sample_table, size=(batch_len * 2 * window_size, neg_samples))
+        neg_v = np.random.choice(self.sample_table, size=(len(pos_u), neg_samples))
         return np.array(pos_u), np.array(pos_v), neg_v, batch_len
 
     def node2vec_yielder(self, window_size, neg_samples):
@@ -146,7 +146,11 @@ if __name__ == "__main__":
     while utils.stop:
         pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=2, batch_size=4, neg_samples=5)
         print(pos_u)
-        print(pos_v)
+        print(len(pos_u))
+        print(len(neg_v))
+        print(pos_v.reshape(len(pos_u), -1))
+        print(neg_v)
+        exit()
     # print(neg_v)
     # neg_v = Variable(torch.LongTensor(neg_v))
     # print(neg_v)
