@@ -9,19 +9,24 @@ import torch
 import random
 from torch.autograd import Variable
 from skipgram_pytorch import SkipGram
+
 np.random.seed(12345)
 data_index = 0
+walk_index = 0
 
 
 class Utils(object):
     def __init__(self, walks, window_size):
-        self.phrase_dic = clean_dictionary(pickle.load(open('relation_utilities/isa/isa_reversed_dic.p', 'rb')))
+        self.phrase_dic = clean_dictionary(pickle.load(open('/home/paperspace/sotiris/thesis/relation_utilities/isa'
+                                                            '/isa_reversed_dic.p', 'rb')))
         self.stop = True
         self.window_size = window_size
         self.walks = walks
         data, self.frequencies, self.word2idx, self.idx2word = self.build_dataset(self.walks)
         self.vocabulary_size = len(self.word2idx)
+        print("Total words: ", self.vocabulary_size)
         self.train_data = data
+        self.current_walk = self.get_walk()
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
 
@@ -68,54 +73,71 @@ class Utils(object):
         neg_v = np.random.choice(self.sample_table, size=(len(pos_pairs), num_neg_samples)).tolist()
         return neg_v
 
+    def get_walk(self):
+        global walk_index
+        try:
+            walk = self.walks[walk_index]
+            walk_index += 1
+            return walk
+        except:
+            print('No more walks..')
+            self.stop = False
+
     def generate_batch(self, window_size, batch_size, neg_samples):
-        data = self.train_data
         global data_index
         span = 2 * window_size + 1
         context = np.ndarray(shape=(batch_size, 2 * window_size), dtype=np.int64)
         labels = np.ndarray(shape=(batch_size), dtype=np.int64)
-        if data_index + span > len(data):
+        if data_index + span > len(self.current_walk):
             data_index = 0
-            self.stop = False
-        buffer = data[data_index:data_index + span]
+        buffer = self.current_walk[data_index:data_index + span]
         pos_u = []
         pos_v = []
+        batch_len = 0
         for i in range(batch_size):
             data_index += 1
             context[i, :] = buffer[:window_size] + buffer[window_size + 1:]
             labels[i] = buffer[window_size]
-            if data_index + span > len(data):
+            if data_index + span > len(self.current_walk):
                 data_index = 0
-                self.stop = False
+                self.current_walk = self.get_walk()
+                if self.stop:
+                    buffer[:] = self.current_walk[:span]
             else:
-                buffer = data[data_index:data_index + span]
-            #pos_u.append(labels[i])
-            for j in range(span - 1):
-                pos_u.append(labels[i])
-                pos_v.append(context[i, j])
-        #neg_v = np.random.choice(self.sample_table, size=(batch_size * neg_samples)).tolist()
-        neg_v = np.random.choice(self.sample_table, size=(batch_size * 2 * window_size * neg_samples)).tolist()
-        return pos_u, pos_v, neg_v
+                buffer = self.current_walk[data_index:data_index + span]
+            if self.stop:
+                batch_len += 1
+                # pos_u.append(labels[i])
+                for j in range(span - 1):
+                    pos_u.append(labels[i])
+                    pos_v.append(context[i, j])
+            else:
+                batch_len += 1
+                # pos_u.append(labels[i])
+                for j in range(span - 1):
+                    pos_u.append(labels[i])
+                    pos_v.append(context[i, j])
+                break
+        neg_v = np.random.choice(self.sample_table, size=(batch_len * 2 * window_size * neg_samples)).tolist()
+        return pos_u, pos_v, neg_v, batch_len
 
     def node2vec_yielder(self, window_size, neg_samples):
-        for phr_id in range(len(self.train_data)):
-            phr = self.train_data[phr_id]
-            # for each window position
-            pos_context = []
-            for w in range(-window_size, window_size + 1):
-                context_word_pos = phr_id + w
-                # make sure not jump out sentence
-                if context_word_pos < 0 or context_word_pos >= len(self.train_data) or phr_id == context_word_pos:
-                    continue
-                context_word_idx = self.train_data[context_word_pos]
-                pos_context.append(context_word_idx)
-            neg_v = np.random.choice(self.sample_table, size=(neg_samples)).tolist()
-            yield phr, pos_context, neg_v
-
-
+        for walk in self.walks:
+            for idx, phr in enumerate(walk):
+                # for each window position
+                pos_context = []
+                for w in range(-window_size, window_size + 1):
+                    context_word_pos = idx + w
+                    # make sure not jump out sentence
+                    if context_word_pos < 0 or context_word_pos >= len(walk) or idx == context_word_pos:
+                        continue
+                    context_word_idx = walk[context_word_pos]
+                    pos_context.append(context_word_idx)
+                neg_v = np.random.choice(self.sample_table, size=(neg_samples)).tolist()
+                yield phr, pos_context, neg_v
 
     def get_num_batches(self, batch_size):
-        num_batches = len(self.train_data) / batch_size
+        num_batches = len(self.walks) * 40 / batch_size
         num_batches = int(math.ceil(num_batches))
         return num_batches
 
@@ -152,10 +174,12 @@ if __name__ == "__main__":
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
     utils = Utils(walks, 2)
-    # pos_u, pos_v, neg_v = utils.generate_batch(window_size=10, batch_size=32, neg_samples=5)
-    for pos_u, pos_v in utils.node2vec_yielder(window_size=2):
-        print(pos_u)
-        print(pos_v)
+    pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=2, batch_size=4, neg_samples=5)
+    print(pos_u)
+    print(pos_v)
+    # for pos_u, pos_v, neg_v in utils.node2vec_yielder(window_size=4, neg_samples=3):
+    #     print(pos_u)
+    #     print(pos_v)
     # print(neg_v)
     # neg_v = Variable(torch.LongTensor(neg_v))
     # print(neg_v)

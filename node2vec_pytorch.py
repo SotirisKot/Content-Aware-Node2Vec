@@ -36,7 +36,8 @@ def phr2idx(phr, word_vocab):
 
 
 class Node2Vec:
-    def __init__(self, walks, output_file, embedding_dim=128, epochs=10, batch_size=32, window_size=10, neg_sample_num=5):
+    def __init__(self, walks, output_file, embedding_dim=128, epochs=10, batch_size=32, window_size=10,
+                 neg_sample_num=5):
         self.utils = Utils(walks, window_size)
         self.vocabulary_size = self.utils.vocabulary_size
         self.node2phr = self.utils.phrase_dic
@@ -46,59 +47,53 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        self.odir_checkpoint = '...'
-        self.odir_embeddings = '...'
+        self.odir_checkpoint = '/home/paperspace/sotiris/'
+        self.odir_embeddings = '/home/paperspace/sotiris/'
         self.output_file = output_file
         self.wv = {}
 
     def train(self):
-        model = SkipGram(self.vocabulary_size, self.embedding_dim, self.neg_sample_num, self.batch_size, self.window_size)
+        model = SkipGram(self.vocabulary_size, self.embedding_dim, self.neg_sample_num, self.batch_size,
+                         self.window_size)
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()
-        optimizer = optim.SGD(model.parameters(), lr=0.001)
+        optimizer = optim.SGD(model.parameters(), lr=0.025)
         total_batches = self.utils.get_num_batches(self.batch_size)
         for epoch in range(self.epochs):
             batch_num = 0
             batch_costs = []
-            # start = time.time()
-            # while self.utils.stop:
-            for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
-                # pos_u, pos_v, neg_v = self.utils.generate_batch(self.window_size, self.batch_size,
-                # self.neg_sample_num)
-                pos_u = Variable(torch.LongTensor(phr2idx(self.node2phr[int(pos_u)], self.utils.word2idx)), requires_grad=False).cuda()
-                pos_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[int(item)], self.utils.word2idx)), requires_grad=False).cuda() for item in pos_v]
-                neg_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[int(item)], self.utils.word2idx)), requires_grad=False).cuda() for item in neg_v]
+            start = time.time()
+            while self.utils.stop:
+                pos_u, pos_v, neg_v, batch_size = self.utils.generate_batch(self.window_size, self.batch_size,
+                                                                            self.neg_sample_num)
+                pos_u = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)),
+                                  requires_grad=False).cuda() for item in pos_u]
+                pos_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)),
+                                  requires_grad=False).cuda() for item in pos_v]
+                neg_v = [Variable(torch.LongTensor(phr2idx(self.node2phr[item], self.utils.word2idx)),
+                                  requires_grad=False).cuda() for item in neg_v]
 
                 # if torch.cuda.is_available():
                 #     pos_u = [pos.cuda() for pos in pos_u]
                 #     pos_v = [pos.cuda() for pos in pos_v]
                 #     neg_v = [neg.cuda() for neg in neg_v]
                 optimizer.zero_grad()
-                # loss = model(pos_u, pos_v, neg_v)
-                # loss.backward()
-                # optimizer.step()
-                # optimizer.zero_grad()
-                instance_cost = model(pos_u, pos_v, neg_v)
-                batch_costs.append(instance_cost)
-                if len(batch_costs) == self.batch_size:
-                    batch_cost = sum(batch_costs) / float(len(batch_costs))
-                    batch_cost.backward()
-                    optimizer.step()
-                    optimizer.zero_grad()
-                    batch_aver_cost = batch_cost.cpu().item()
-                    batch_costs = []
-                    print('Epoch: {}, Batch Loss: {}, num_batch: {}/{}'.format(epoch, batch_aver_cost, batch_num,
-                                                                               total_batches))
-
-                # if batch_num % 10 == 0:
-                #     print('Epoch: {}, Batch Loss: {}, num_batch: {}/{}'.format(epoch,loss.item(), batch_num, total_batches))
-                #     # print('It took', time.time() - start, 'seconds, for 10 batches.')
-                #     # start = time.time()
-                # batch_num += 1
+                loss = model(pos_u, pos_v, neg_v, batch_size)
+                loss.backward()
+                optimizer.step()
+                batch_costs.append(loss.cpu().item())
+                if batch_num % 100 == 0:
+                    print('Batch Average Loss: {}, num_batch: {}/{} '.format(sum(batch_costs) / float(len(batch_costs)),
+                                                                             batch_num, total_batches))
+                    print('It took', time.time()-start, 'seconds.')
+                batch_num += 1
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
-            save_checkpoint(state, filename=self.odir_checkpoint + 'isa_average_words_checkpoint_epoch_{}.pth.tar'.format(epoch + 1))
+            save_checkpoint(state,
+                            filename=self.odir_checkpoint + 'isa_average_words_checkpoint_epoch_{}.pth.tar'.format(
+                                epoch + 1))
             self.utils.stop = True
         print("Optimization Finished!")
-        self.wv = model.save_embeddings(file_name=self.odir_embeddings + self.output_file, idx2word=self.utils.idx2word, use_cuda=True)
+        self.wv = model.save_embeddings(file_name=self.odir_embeddings + self.output_file, idx2word=self.utils.idx2word,
+                                        use_cuda=True)

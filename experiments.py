@@ -24,13 +24,13 @@ def parse_args():
     parser.add_argument('--output', nargs='?', default='isa_average_words_link_predict.emb',
                         help='Embeddings path')
 
-    parser.add_argument('--dimensions', type=int, default=128,
+    parser.add_argument('--dimensions', type=int, default=30,
                         help='Number of dimensions. Default is 128.')
 
-    parser.add_argument('--walk-length', type=int, default=40,
+    parser.add_argument('--walk-length', type=int, default=80,
                         help='Length of walk per source. Default is 80.')
 
-    parser.add_argument('--num-walks', type=int, default=10,
+    parser.add_argument('--num-walks', type=int, default=5,
                         help='Number of walks per source. Default is 10.')
 
     parser.add_argument('--window-size', type=int, default=10,
@@ -92,12 +92,12 @@ def read_graph(file, get_connected_graph=True, remove_selfloops=True):
 def learn_embeddings(walks):
     # walks = [map(str, walk) for walk in walks] # this will work on python2 but not in python3
     print('Creating walk corpus..')
-    #walks = [list(map(str, walk)) for walk in walks]  # this is for python3
+    walks = [list(map(str, walk)) for walk in walks]  # this is for python3
     # odir = '/home/paperspace/sotiris/thesis/'
     # with open('{}.p'.format(os.path.join(odir, 'walks')), 'wb') as dump_file:
     #     pickle.dump(walks, dump_file)
     model = Node2Vec(walks=walks, output_file=args.output, embedding_dim=args.dimensions,
-                     epochs=args.iter, batch_size=32, window_size=args.window_size, neg_sample_num=5)
+                     epochs=args.iter, batch_size=32, window_size=args.window_size, neg_sample_num=2)
     print('Optimization started...')
     model.train()
     embeddings = model.wv
@@ -288,12 +288,7 @@ def main(args):
     G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
     G.preprocess_transition_probs()
     walks = G.simulate_walks(args.num_walks, args.walk_length)
-    # walks = pickle.load(open('/home/paperspace/sotiris/thesis/walks.p', 'rb'))
-    # walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
-    #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
-    #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
     node_embeddings = learn_embeddings(walks)
-    # node_embeddings = load_embeddings('isa_link_predict.emb')
 
     # for training
     train_pos_edge_embs = get_edge_embeddings(train_pos, node_embeddings)
@@ -328,4 +323,4 @@ def main(args):
 
 if __name__ == "__main__":
     args = parse_args()
-main(args)
+    main(args)

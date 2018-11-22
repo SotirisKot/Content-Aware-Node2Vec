@@ -36,7 +36,7 @@ class Utils(object):
         print('Building dataset..')
         vocab_size, vocabulary = self.build_word_vocab(walks)
         count = []
-        count.extend(collections.Counter(vocabulary).most_common(vocab_size - 1))
+        count.extend(collections.Counter(vocabulary).most_common(vocab_size))
         dictionary = {}
         for word, _ in count:
             dictionary[word] = len(dictionary)
@@ -130,12 +130,11 @@ class Utils(object):
                 yield phr, pos_context, neg_v
 
 if __name__ == "__main__":
-
     walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
-             ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
+             ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1','9999']]
     utils = Utils(walks, 2)
     # pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=2, batch_size=32, neg_samples=5)
     # print(pos_u)
@@ -143,6 +142,7 @@ if __name__ == "__main__":
     # print(batch_size)
     # print(len(pos_v))
     # print(len(neg_v))
+    print(utils.vocab_words)
     while utils.stop:
         pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=2, batch_size=4, neg_samples=5)
         print(pos_u)
