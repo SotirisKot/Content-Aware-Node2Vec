@@ -70,11 +70,11 @@ class Node2Vec:
             for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
 
                 pos_u = Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(pos_u)], self.utils.word2idx)),
-                                 requires_grad=False)
+                                 requires_grad=False).cuda()
                 pos_v = [Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)),
-                                  requires_grad=False) for item in pos_v]
+                                  requires_grad=False).cuda() for item in pos_v]
                 neg_v = [Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)),
-                                  requires_grad=False) for item in neg_v]
+                                  requires_grad=False).cuda() for item in neg_v]
                 optimizer.zero_grad()
                 loss = model(pos_u, pos_v, neg_v)
                 loss.backward()
