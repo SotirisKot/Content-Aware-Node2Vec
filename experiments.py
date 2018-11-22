@@ -92,12 +92,12 @@ def read_graph(file, get_connected_graph=True, remove_selfloops=True):
 def learn_embeddings(walks):
     # walks = [map(str, walk) for walk in walks] # this will work on python2 but not in python3
     print('Creating walk corpus..')
-    walks = [list(map(str, walk)) for walk in walks]  # this is for python3
+    # walks = [list(map(str, walk)) for walk in walks]  # this is for python3
     # odir = '/home/paperspace/sotiris/thesis/'
     # with open('{}.p'.format(os.path.join(odir, 'walks')), 'wb') as dump_file:
     #     pickle.dump(walks, dump_file)
     model = Node2Vec(walks=walks, output_file=args.output, embedding_dim=args.dimensions,
-                     epochs=args.iter, batch_size=32, window_size=args.window_size, neg_sample_num=2)
+                     epochs=args.iter, batch_size=32, window_size=args.window_size, neg_sample_num=3)
     print('Optimization started...')
     model.train()
     embeddings = model.wv
@@ -285,9 +285,10 @@ def main(args):
     print(
         'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
     print('Number of connected components: ', nx.number_connected_components(train_graph))
-    G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
-    G.preprocess_transition_probs()
-    walks = G.simulate_walks(args.num_walks, args.walk_length)
+    # G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
+    # G.preprocess_transition_probs()
+    # walks = G.simulate_walks(args.num_walks, args.walk_length)
+    walks = pickle.load(open('/home/paperspace/sotiris/thesis/walks.p'))
     node_embeddings = learn_embeddings(walks)
 
     # for training
