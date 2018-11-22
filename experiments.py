@@ -288,7 +288,7 @@ def main(args):
     # G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
     # G.preprocess_transition_probs()
     # walks = G.simulate_walks(args.num_walks, args.walk_length)
-    walks = pickle.load(open('/home/paperspace/sotiris/thesis/walks.p'))
+    walks = pickle.load(open('/home/paperspace/sotiris/thesis/walks.p', 'rb'))
     # walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
     #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
     #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
