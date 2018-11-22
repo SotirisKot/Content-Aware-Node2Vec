@@ -52,7 +52,7 @@ class SkipGram(nn.Module):
 
         return pos_u_average, pos_v_average, neg_v_average
 
-    def forward(self, pos_u, pos_v, neg_v, batch_size):
+    def forward(self, pos_u, pos_v, neg_v):
         embed_u, embed_v, neg_embed_v = self.get_average_embedings(pos_u, pos_v, neg_v)
         # score = torch.mul(embed_u, embed_v)
         # score = torch.sum(score, dim=1)
