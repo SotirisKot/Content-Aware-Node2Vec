@@ -26,7 +26,7 @@ class Utils(object):
         self.vocabulary_size = len(self.word2idx)
         print("Total words: ", self.vocabulary_size)
         self.train_data = data
-        # self.current_walk = self.get_walk()
+        self.current_walk = self.get_walk()
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
 
@@ -107,18 +107,18 @@ class Utils(object):
                 buffer = self.current_walk[data_index:data_index + span]
             if self.stop:
                 batch_len += 1
-                # pos_u.append(labels[i])
+                pos_u.append(labels[i])
                 for j in range(span - 1):
-                    pos_u.append(labels[i])
+                    # pos_u.append(labels[i])
                     pos_v.append(context[i, j])
             else:
                 batch_len += 1
-                # pos_u.append(labels[i])
+                pos_u.append(labels[i])
                 for j in range(span - 1):
-                    pos_u.append(labels[i])
+                    # pos_u.append(labels[i])
                     pos_v.append(context[i, j])
                 break
-        neg_v = np.random.choice(self.sample_table, size=(batch_len * 2 * window_size * neg_samples)).tolist()
+        neg_v = np.random.choice(self.sample_table, size=(len(pos_u) * neg_samples)).tolist()
         return pos_u, pos_v, neg_v, batch_len
 
     def node2vec_yielder(self, window_size, neg_samples):
@@ -138,7 +138,7 @@ class Utils(object):
                 yield phr, pos_context, neg_v
 
     def get_num_batches(self, batch_size):
-        num_batches = len(self.walks) * 80 / batch_size
+        num_batches = len(self.walks) * 40
         num_batches = int(math.ceil(num_batches))
         return num_batches
 

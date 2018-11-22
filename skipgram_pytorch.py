@@ -27,12 +27,12 @@ class SkipGram(nn.Module):
         self.v_embeddings.weight.data.uniform_(-0, 0)
 
     def get_average_embedings(self, pos_u, pos_v, neg_v):
-        # pos_u_average = []
-        # for phrase_idxs in pos_u:
-        embed_u = self.u_embeddings(pos_u)
-        embed = torch.sum(embed_u, dim=0)
-        pos_u_average = embed / float(len(pos_u))
-        # pos_u_average = torch.stack(pos_u_average)
+        pos_u_average = []
+        for phrase_idxs in pos_u:
+            embed_u = self.u_embeddings(phrase_idxs)
+            embed = torch.sum(embed_u, dim=0)
+            pos_u_average.append(embed / float(len(phrase_idxs)))
+        pos_u_average = torch.stack(pos_u_average)
 
         pos_v_average = []
         for phrase_idxs in pos_v:
@@ -40,6 +40,7 @@ class SkipGram(nn.Module):
             embed = torch.sum(embed_v, dim=0)
             pos_v_average.append(embed / float(len(phrase_idxs)))
         pos_v_average = torch.stack(pos_v_average)
+        pos_v_average = pos_v_average.view(pos_u_average.shape[0], -1, self.embedding_dim)
 
         neg_v_average = []
         for phrase_idxs in neg_v:
@@ -47,24 +48,28 @@ class SkipGram(nn.Module):
             embed = torch.sum(neg_embed_v, dim=0)
             neg_v_average.append(embed / float(len(phrase_idxs)))
         neg_v_average = torch.stack(neg_v_average)
-        # neg_v_average = neg_v_average.view(pos_u_average.shape[0], self.neg_sample_num, self.embedding_dim)
+        neg_v_average = neg_v_average.view(pos_u_average.shape[0], self.neg_sample_num, self.embedding_dim)
 
         return pos_u_average, pos_v_average, neg_v_average
 
-    def forward(self, pos_u, pos_v, neg_v):
+    def forward(self, pos_u, pos_v, neg_v, batch_size):
         embed_u, embed_v, neg_embed_v = self.get_average_embedings(pos_u, pos_v, neg_v)
-        embed = embed_u.expand_as(embed_v)
-        score = torch.mul(embed, embed_v)
-        score = torch.sum(score, dim=1)
-        log_target = F.logsigmoid(score)
-        embed = embed_u.expand_as(neg_embed_v)
-        neg_score = torch.mul(embed, neg_embed_v)
-        neg_score = torch.sum(neg_score, dim=1)
+        # score = torch.mul(embed_u, embed_v)
+        # score = torch.sum(score, dim=1)
+        # log_target = F.logsigmoid(score)
         # neg_score = torch.bmm(neg_embed_v, embed_u.unsqueeze(2)).squeeze()
-        sum_log_sampled = F.logsigmoid(-1 * neg_score)
+        # sum_log_sampled = F.logsigmoid(-1 * neg_score)
         # sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
-        loss = log_target.sum() + sum_log_sampled.sum()
-        return -1 * loss
+        # loss = log_target + sum_log_sampled
+        # return -1 * loss.sum() / float(batch_size)
+        score = torch.bmm(embed_v, embed_u.unsqueeze(2)).squeeze()
+        log_target = F.logsigmoid(score)
+        log_target = torch.sum(log_target, dim=1)
+        neg_score = torch.bmm(neg_embed_v, embed_u.unsqueeze(2)).squeeze()
+        sum_log_sampled = F.logsigmoid(-1 * neg_score)
+        sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
+        loss = log_target + sum_log_sampled
+        return -1 * loss.sum() / float(len(pos_u))
 
     def save_embeddings(self, file_name, idx2word, use_cuda=False):
         wv = {}

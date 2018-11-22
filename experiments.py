@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument('--num-walks', type=int, default=5,
                         help='Number of walks per source. Default is 10.')
 
-    parser.add_argument('--window-size', type=int, default=5,
+    parser.add_argument('--window-size', type=int, default=10,
                         help='Context size for optimization. Default is 10.')
 
     parser.add_argument('--iter', default=1, type=int,
@@ -97,7 +97,7 @@ def learn_embeddings(walks):
     # with open('{}.p'.format(os.path.join(odir, 'walks')), 'wb') as dump_file:
     #     pickle.dump(walks, dump_file)
     model = Node2Vec(walks=walks, output_file=args.output, embedding_dim=args.dimensions,
-                     epochs=args.iter, batch_size=32, window_size=args.window_size, neg_sample_num=3)
+                     epochs=args.iter, batch_size=32, window_size=args.window_size, neg_sample_num=5)
     print('Optimization started...')
     model.train()
     embeddings = model.wv
@@ -289,6 +289,9 @@ def main(args):
     # G.preprocess_transition_probs()
     # walks = G.simulate_walks(args.num_walks, args.walk_length)
     walks = pickle.load(open('/home/paperspace/sotiris/thesis/walks.p'))
+    # walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
+    #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
+    #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
     node_embeddings = learn_embeddings(walks)
 
     # for training
