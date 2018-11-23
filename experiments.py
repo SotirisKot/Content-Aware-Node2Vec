@@ -91,7 +91,7 @@ def read_graph(file, get_connected_graph=True, remove_selfloops=True):
 def learn_embeddings(walks):
     # walks = [map(str, walk) for walk in walks] # this will work on python2 but not in python3
     print('Creating walk corpus..')
-    # walks = [list(map(str, walk)) for walk in walks]  # this is for python3
+    walks = [list(map(str, walk)) for walk in walks]  # this is for python3
     # odir = '/home/paperspace/sotiris/thesis/'
     # with open('{}.p'.format(os.path.join(odir, 'walks')), 'wb') as dump_file:
     #     pickle.dump(walks, dump_file)
@@ -284,12 +284,9 @@ def main(args):
     print(
         'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
     print('Number of connected components: ', nx.number_connected_components(train_graph))
-    #G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
-    #G.preprocess_transition_probs()
-    # walks = G.simulate_walks(args.num_walks, args.walk_length)
-    walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
-             ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
-             ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
+    G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
+    G.preprocess_transition_probs()
+    walks = G.simulate_walks(args.num_walks, args.walk_length)
     node_embeddings = learn_embeddings(walks)
 
     # for training
