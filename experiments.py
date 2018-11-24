@@ -255,7 +255,7 @@ def load_embeddings(file):
             word = line[0]
             embedding = [float(x) for x in line[1:]]
             assert len(embedding) == 128
-            node_embeddings[word] = embedding
+            node_embeddings[word] = np.array(embedding)
     return node_embeddings
 
 
