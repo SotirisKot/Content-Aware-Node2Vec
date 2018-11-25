@@ -136,7 +136,7 @@ class Utils(object):
                 yield phr, pos_context, neg_v
 
     def get_num_batches(self, batch_size):
-        num_batches = len(self.walks) * 40
+        num_batches = len(self.walks) * 20
         num_batches = int(math.ceil(num_batches))
         return num_batches
 
