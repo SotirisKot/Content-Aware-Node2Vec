@@ -108,7 +108,7 @@ def get_edge_embeddings(edge_list, node_embeddings):
 
 def load_embeddings(file):
     node_embeddings = {}
-    odir = 'C:/Users/sotir/PycharmProjects/thesis/'
+    odir = '/home/paperspace/sotiris/'
     with open("{}".format(os.path.join(odir, file)), 'r') as embeddings:
         embeddings.readline()
         for i, line in enumerate(embeddings):
@@ -122,14 +122,12 @@ def load_embeddings(file):
 
 def get_average_embedding(phrase, node_embeddings):
     length = len(phrase)
-    print(phrase)
-    exit()
     phrase = phrase.split()
     for idx, word in enumerate(phrase):
         if idx == 0:
-            sum = torch.from_numpy(node_embeddings[word])
+            sum = node_embeddings[word]
         else:
-            sum = sum + torch.from_numpy(node_embeddings[word])
+            sum = sum + node_embeddings[word]
     average_embedding = sum / float(length)
     return average_embedding
 
