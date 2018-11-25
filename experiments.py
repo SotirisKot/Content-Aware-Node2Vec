@@ -29,7 +29,7 @@ def parse_args():
     parser.add_argument('--walk-length', type=int, default=20,
                         help='Length of walk per source. Default is 80.')
 
-    parser.add_argument('--num-walks', type=int, default=5,
+    parser.add_argument('--num-walks', type=int, default=2,
                         help='Number of walks per source. Default is 10.')
 
     parser.add_argument('--window-size', type=int, default=5,
