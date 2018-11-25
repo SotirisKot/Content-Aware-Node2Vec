@@ -21,19 +21,19 @@ def parse_args():
                         default='C:/Users/sotir/PycharmProjects/node2vec_average_embeddings/isa2_relations.edgelist',
                         help='Input graph path')
 
-    parser.add_argument('--output', nargs='?', default='isa_average_words_link_predict.emb',
+    parser.add_argument('--output', nargs='?', default='isa_baseline_link_predict.emb',
                         help='Embeddings path')
 
-    parser.add_argument('--dimensions', type=int, default=128,
+    parser.add_argument('--dimensions', type=int, default=30,
                         help='Number of dimensions. Default is 128.')
 
-    parser.add_argument('--walk-length', type=int, default=80,
+    parser.add_argument('--walk-length', type=int, default=40,
                         help='Length of walk per source. Default is 80.')
 
     parser.add_argument('--num-walks', type=int, default=5,
                         help='Number of walks per source. Default is 10.')
 
-    parser.add_argument('--window-size', type=int, default=10,
+    parser.add_argument('--window-size', type=int, default=5,
                         help='Context size for optimization. Default is 10.')
 
     parser.add_argument('--iter', default=1, type=int,
@@ -93,11 +93,8 @@ def learn_embeddings(walks):
     # walks = [map(str, walk) for walk in walks] # this will work on python2 but not in python3
     print('Creating walk corpus..')
     walks = [list(map(str, walk)) for walk in walks]  # this is for python3
-    # odir = '/home/paperspace/sotiris/thesis/'
-    # with open('{}.p'.format(os.path.join(odir, 'walks')), 'wb') as dump_file:
-    #     pickle.dump(walks, dump_file)
     model = Node2Vec(walks=walks, output_file=args.output, embedding_dim=args.dimensions,
-                     epochs=args.iter, batch_size=32, window_size=args.window_size, neg_sample_num=5)
+                     epochs=args.iter, batch_size=32, window_size=args.window_size, neg_sample_num=2)
     print('Optimization started...')
     model.train()
     embeddings = model.wv

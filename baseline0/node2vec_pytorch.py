@@ -26,8 +26,8 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        self.odir_checkpoint = '/home/sotiris/'
-        self.odir_embeddings = '/home/sotiris/'
+        self.odir_checkpoint = '/home/paperspace/sotiris/thesis/baseline0/'
+        self.odir_embeddings = '/home/paperspace/sotiris/thesis/baseline0/'
         self.output_file = output_file
         self.wv = {}
 
@@ -37,13 +37,14 @@ class Node2Vec:
             print('GPU available!!')
             model.cuda()
         optimizer = optim.SGD(model.parameters(), lr=0.025)
+        total_batches = self.utils.get_num_batches(self.batch_size)
         for epoch in range(self.epochs):
-            batch_num = 0
-            batch_costs = []
-            while self.utils.stop:
-                pos_u, pos_v, neg_v, batch_size = self.utils.generate_batch(self.window_size,self.batch_size,self.neg_sample_num)
+            instance_num = 0
+            instance_costs = []
+            start = time.time()
+            for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
 
-                pos_u = Variable(torch.LongTensor(pos_u))
+                pos_u = Variable(torch.LongTensor([pos_u]))
                 pos_v = Variable(torch.LongTensor(pos_v))
                 neg_v = Variable(torch.LongTensor(neg_v))
 
@@ -53,16 +54,23 @@ class Node2Vec:
                     neg_v = neg_v.cuda()
 
                 optimizer.zero_grad()
-                loss = model(pos_u, pos_v, neg_v, batch_size)
+                loss = model(pos_u, pos_v, neg_v)
                 loss.backward()
                 optimizer.step()
-                batch_costs.append(loss.cpu().item())
-                if batch_num % 5000 == 0:
-                    print('Batch Average Loss: {}, num_batch: {} '.format(sum(batch_costs)/float(len(batch_costs)), batch_num))
-                batch_num += 1
+                instance_costs.append(loss.cpu().item())
+                if len(instance_costs) % 5000 == 0:
+                    print('Instances Average Loss: {}, instances: {}/{} '.format(
+                        sum(instance_costs) / float(len(instance_costs)),
+                        instance_num, total_batches))
+                    print('It took', time.time() - start, 'seconds.')
+                    start = time.time()
+                    instance_costs = []
+                instance_num += 1
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
-            save_checkpoint(state, filename=self.odir_checkpoint + 'isa_undirected_checkpoint_epoch_{}.pth.tar'.format(epoch + 1))
+            save_checkpoint(state,
+                            filename=self.odir_checkpoint + 'isa_average_words_checkpoint_epoch_{}.pth.tar'.format(
+                                epoch + 1))
             self.utils.stop = True
         print("Optimization Finished!")
         self.wv = model.save_embeddings(file_name=self.odir_embeddings + self.output_file, idx2word=self.utils.vocab_words, use_cuda=True)

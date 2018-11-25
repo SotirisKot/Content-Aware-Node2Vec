@@ -41,7 +41,7 @@ class Utils(object):
         for word, _ in count:
             dictionary[word] = len(dictionary)
         data = []
-        for walk in self.walks:
+        for walk in tqdm(self.walks):
             for idx, nodeid in enumerate(walk):
                 index = dictionary[nodeid]
                 walk[idx] = index
@@ -114,8 +114,7 @@ class Utils(object):
         return np.array(pos_u), np.array(pos_v), neg_v, batch_len
 
     def node2vec_yielder(self, window_size, neg_samples):
-        walk = self.get_walk()
-        if self.stop:
+        for walk in self.walks:
             for idx, phr in enumerate(walk):
                 # for each window position
                 pos_context = []
@@ -128,6 +127,12 @@ class Utils(object):
                     pos_context.append(context_word_idx)
                 neg_v = np.random.choice(self.sample_table, size=(neg_samples)).tolist()
                 yield phr, pos_context, neg_v
+
+    def get_num_batches(self, batch_size):
+        num_batches = len(self.walks) * 40
+        num_batches = int(math.ceil(num_batches))
+        return num_batches
+
 
 if __name__ == "__main__":
     walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
