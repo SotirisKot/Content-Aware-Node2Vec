@@ -26,7 +26,7 @@ def parse_args():
     parser.add_argument('--dimensions', type=int, default=30,
                         help='Number of dimensions. Default is 128.')
 
-    parser.add_argument('--walk-length', type=int, default=20,
+    parser.add_argument('--walk-length', type=int, default=40,
                         help='Length of walk per source. Default is 80.')
 
     parser.add_argument('--num-walks', type=int, default=2,
