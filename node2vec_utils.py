@@ -17,7 +17,11 @@ walk_index = 0
 
 class Utils(object):
     def __init__(self, walks, window_size):
-        self.phrase_dic = clean_dictionary(pickle.load(open('relation_utilities/isa/isa_reversed_dic.p', 'rb')))
+        # self.phrase_dic = clean_dictionary(pickle.load(
+        #     open('relation_utilities/isa/isa_reversed_dic.p', 'rb')))
+        # self.phrase_dic = clean_dictionary(pickle.load(open('drive/My Drive/node2vec_average_embeddings/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
+        self.phrase_dic = clean_dictionary(pickle.load(
+            open('/home/paperspace/sotiris/thesis/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
         self.stop = True
         self.window_size = window_size
         self.walks = walks
@@ -106,22 +110,22 @@ class Utils(object):
                 buffer = self.current_walk[data_index:data_index + span]
             if self.stop:
                 batch_len += 1
-                pos_u.append(labels[i])
+                # pos_u.append(labels[i])
                 for j in range(span - 1):
-                    # pos_u.append(labels[i])
+                    pos_u.append(labels[i])
                     pos_v.append(context[i, j])
             else:
                 batch_len += 1
-                pos_u.append(labels[i])
+                # pos_u.append(labels[i])
                 for j in range(span - 1):
-                    # pos_u.append(labels[i])
+                    pos_u.append(labels[i])
                     pos_v.append(context[i, j])
                 break
-        neg_v = np.random.choice(self.sample_table, size=(len(pos_u) * neg_samples)).tolist()
+        neg_v = np.random.choice(self.sample_table, size=(batch_len * neg_samples)).tolist()
         return pos_u, pos_v, neg_v, batch_len
 
     def node2vec_yielder(self, window_size, neg_samples):
-        for walk in self.walks:
+        for walk in tqdm(self.walks):
             for idx, phr in enumerate(walk):
                 # for each window position
                 pos_context = []
@@ -132,11 +136,11 @@ class Utils(object):
                         continue
                     context_word_idx = walk[context_word_pos]
                     pos_context.append(context_word_idx)
-                neg_v = np.random.choice(self.sample_table, size=(neg_samples)).tolist()
+                neg_v = np.random.choice(self.sample_table, size=(len(pos_context) * neg_samples)).tolist()
                 yield phr, pos_context, neg_v
 
     def get_num_batches(self, batch_size):
-        num_batches = len(self.walks) * 20
+        num_batches = len(self.walks) * 80
         num_batches = int(math.ceil(num_batches))
         return num_batches
 
@@ -173,19 +177,21 @@ if __name__ == "__main__":
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
     utils = Utils(walks, 2)
-    # pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=2, batch_size=4, neg_samples=5)
-    # print(pos_u)
-    # print(pos_v)
-    print(utils.idx2word.items())
-    exit()
-    for pos_u, pos_v, neg_v in utils.node2vec_yielder(window_size=2, neg_samples=3):
-        pos_u = Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(pos_u)], utils.word2idx)),
-                         requires_grad=False)
-        pos_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
-                          requires_grad=False) for item in pos_v]
-        neg_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
-                          requires_grad=False) for item in neg_v]
-        print(pos_u, pos_v)
+    pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=5, batch_size=1, neg_samples=5)
+    print(pos_u)
+    print(len(pos_u))
+    print(pos_v)
+    print(len(pos_v))
+    print(batch_size)
+    # for pos_u, pos_v, neg_v in utils.node2vec_yielder(window_size=2, neg_samples=3):
+    #     # pos_u = Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(pos_u)], utils.word2idx)),
+    #     #                  requires_grad=False)
+    #     # pos_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
+    #     #                   requires_grad=False) for item in pos_v]
+    #     # neg_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
+    #     #                   requires_grad=False) for item in neg_v]
+    #     print(pos_u)
+    #     print(pos_v)
     # print(neg_v)
     # neg_v = Variable(torch.LongTensor(neg_v))
     # print(neg_v)

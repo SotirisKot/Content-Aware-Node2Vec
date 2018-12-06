@@ -8,6 +8,7 @@ import os
 import torch
 from tqdm import tqdm
 from pprint import pprint
+import codecs
 import re
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve, auc, roc_auc_score
@@ -91,13 +92,19 @@ def tokenize(x):
     return bioclean(x)
 
 
+def cos_sim(a, b):
+    dot_product = np.dot(a, b)
+    norm_a = np.linalg.norm(a)
+    norm_b = np.linalg.norm(b)
+    return dot_product / (norm_a * norm_b)
+
+
 # in the paper they get edge embeddings..they use a lot of methods but for link prediction they state that
 # the Hadamard product is highly stable and gives the best performance.
-def get_edge_embeddings(edge_list, node_embeddings):
+def get_edge_embeddings(edge_list, node_embeddings, phrase_dic):
     # create a list containing edge embeddings
-    phrase_dic = clean_dictionary(pickle.load(open('relation_utilities/isa/isa_reversed_dic.p', 'rb')))
     edge_embeddings = []
-    for edge in edge_list:
+    for idx, edge in enumerate(edge_list):
         phrase_node1 = get_average_embedding(phrase_dic[edge[0]], node_embeddings)
         phrase_node2 = get_average_embedding(phrase_dic[edge[1]], node_embeddings)
         hadamard = np.multiply(phrase_node1, phrase_node2)
@@ -108,15 +115,15 @@ def get_edge_embeddings(edge_list, node_embeddings):
 
 def load_embeddings(file):
     node_embeddings = {}
-    odir = '/home/paperspace/sotiris/'
-    with open("{}".format(os.path.join(odir, file)), 'r') as embeddings:
+    odir = 'C:/Users/sotir/Desktop/isa_embeddings/'
+    with codecs.open("{}".format(os.path.join(odir, file)), 'r', 'utf-8') as embeddings:
         embeddings.readline()
         for i, line in enumerate(embeddings):
             line = line.strip().split(' ')
             word = line[0]
             embedding = [float(x) for x in line[1:]]
             assert len(embedding) == 30
-            node_embeddings[word] = np.array(embedding)
+            node_embeddings[word] = embedding
     return node_embeddings
 
 
@@ -127,8 +134,9 @@ def get_average_embedding(phrase, node_embeddings):
         if idx == 0:
             sum = node_embeddings[word]
         else:
-            sum = sum + node_embeddings[word]
-    average_embedding = sum / float(length)
+            sum = np.add(sum, node_embeddings[word])
+
+    average_embedding = np.divide(sum, float(length))
     return average_embedding
 
 
@@ -156,29 +164,29 @@ def main(args):
     print(
         'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
     print('Number of connected components: ', nx.number_connected_components(train_graph))
-    node_embeddings = load_embeddings('isa_average_words_link_predict.emb')
-
+    node_embeddings = load_embeddings('isa_average_sum_words_link_predict.emb')
+    phrase_dic = clean_dictionary(pickle.load(open('relation_utilities/isa/isa_reversed_dic.p', 'rb')))
     # for training
-    train_pos_edge_embs = get_edge_embeddings(train_pos, node_embeddings)
-    train_neg_edge_embs = get_edge_embeddings(train_neg, node_embeddings)
+    train_pos_edge_embs = get_edge_embeddings(train_pos, node_embeddings, phrase_dic)
+    train_neg_edge_embs = get_edge_embeddings(train_neg, node_embeddings, phrase_dic)
     train_set = np.concatenate([train_pos_edge_embs, train_neg_edge_embs])
 
     # labels: 1-> link exists, 0-> false edge
-    train_labels = np.zeros(len(train_set))
+    train_labels = np.zeros(len(train_set), dtype=int)
     train_labels[:len(train_pos_edge_embs)] = 1
-
     # for testing
-    test_pos_edge_embs = get_edge_embeddings(test_pos, node_embeddings)
-    test_neg_edge_embs = get_edge_embeddings(test_neg, node_embeddings)
+    test_pos_edge_embs = get_edge_embeddings(test_pos, node_embeddings, phrase_dic)
+    test_neg_edge_embs = get_edge_embeddings(test_neg, node_embeddings, phrase_dic)
     test_set = np.concatenate([test_pos_edge_embs, test_neg_edge_embs])
 
     # labels: 1-> link exists, 0-> false edge
-    test_labels = np.zeros(len(test_set))
+    test_labels = np.zeros(len(test_set), dtype=int)
     test_labels[:len(test_pos_edge_embs)] = 1
 
     # train the classifier and evaluate in the test set
-    classifier = LogisticRegression(random_state=0)
+    classifier = LogisticRegression(random_state=1997)
     classifier.fit(train_set, train_labels)
+    print('done')
 
     # evaluate
     test_preds = classifier.predict_proba(test_set)[:, 1]

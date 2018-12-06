@@ -47,6 +47,8 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
+        # self.odir_checkpoint = 'drive/My Drive/pytorch-node2vec-umls-relations/checkpoints/'
+        # self.odir_embeddings = 'drive/My Drive/pytorch-node2vec-umls-relations/embeddings/'
         self.odir_checkpoint = '/home/paperspace/sotiris/'
         self.odir_embeddings = '/home/paperspace/sotiris/'
         self.output_file = output_file
@@ -89,17 +91,18 @@ class Node2Vec:
                 loss.backward()
                 optimizer.step()
                 instance_costs.append(loss.cpu().item())
-                if len(instance_costs) % 5000 == 0:
-                    print('Instances Average Loss: {}, instances: {}/{} '.format(sum(instance_costs) / float(len(instance_costs)),
-                                                                             instance_num, total_batches))
-                    print('It took', time.time()-start, 'seconds.')
+                if instance_num % 5000 == 0:
+                    print('Instances Average Loss: {}, instances: {}/{} '.format(
+                        sum(instance_costs) / float(len(instance_costs)),
+                        instance_num, total_batches))
+                    print('It took', time.time() - start, 'seconds.')
                     start = time.time()
                     instance_costs = []
                 instance_num += 1
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             save_checkpoint(state,
-                            filename=self.odir_checkpoint + 'isa_average_words_checkpoint_epoch_{}.pth.tar'.format(
+                            filename=self.odir_checkpoint + 'part_of_average_checkpoint_epoch_{}.pth.tar'.format(
                                 epoch + 1))
             self.utils.stop = True
         print("Optimization Finished!")

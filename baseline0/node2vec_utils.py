@@ -20,7 +20,7 @@ class Utils(object):
         self.walks = walks
         data, self.frequencies, self.vocab_words = self.build_dataset(self.walks)
         self.train_data = data
-        # self.current_walk = self.get_walk()
+        self.current_walk = self.get_walk()
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
 
@@ -99,18 +99,18 @@ class Utils(object):
                 buffer = self.current_walk[data_index:data_index + span]
             if self.stop:
                 batch_len += 1
-                pos_u.append(labels[i])
+                # pos_u.append(labels[i])
                 for j in range(span - 1):
-                    # pos_u.append(labels[i])
+                    pos_u.append(labels[i])
                     pos_v.append(context[i, j])
             else:
                 batch_len += 1
-                pos_u.append(labels[i])
+                # pos_u.append(labels[i])
                 for j in range(span - 1):
-                    # pos_u.append(labels[i])
+                    pos_u.append(labels[i])
                     pos_v.append(context[i, j])
                 break
-        neg_v = np.random.choice(self.sample_table, size=(len(pos_u), neg_samples))
+        neg_v = np.random.choice(self.sample_table, size=(batch_len*2*window_size, neg_samples))
         return np.array(pos_u), np.array(pos_v), neg_v, batch_len
 
     def node2vec_yielder(self, window_size, neg_samples):
@@ -129,7 +129,7 @@ class Utils(object):
                 yield phr, pos_context, neg_v
 
     def get_num_batches(self, batch_size):
-        num_batches = len(self.walks) * 40
+        num_batches = len(self.walks) * 80 / batch_size
         num_batches = int(math.ceil(num_batches))
         return num_batches
 
@@ -149,9 +149,9 @@ if __name__ == "__main__":
     # print(len(neg_v))
     print(utils.vocab_words)
     while utils.stop:
-        for pos_u, pos_v, neg_v in utils.node2vec_yielder(2, 4):
-            print(pos_u)
-            print(pos_v)
+        pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=2, batch_size=6, neg_samples=5)
+        print(pos_u)
+        print(pos_v)
     # print(neg_v)
     # neg_v = Variable(torch.LongTensor(neg_v))
     # print(neg_v)

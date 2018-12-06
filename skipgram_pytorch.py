@@ -28,29 +28,20 @@ class SkipGram(nn.Module):
 
     def get_average_embedings(self, pos_u, pos_v, neg_v):
         embed_u = self.u_embeddings(pos_u)
-        embed_add = embed_u[0]
-        if len(pos_u) > 1:
-            for i in embed_u[1:]:
-                embed_add = embed_add + i
+        embed_add = torch.sum(embed_u, dim=0)
         pos_u_average = embed_add / float(len(pos_u))
 
         pos_v_average = []
         for phrase_idxs in pos_v:
             embed_v = self.v_embeddings(phrase_idxs)
-            embed_add = embed_v[0]
-            if len(phrase_idxs) > 1:
-                for i in embed_v[1:]:
-                    embed_add = embed_add + i
-            pos_v_average.append(embed_add / float(len(phrase_idxs)))
+            embed_add = torch.sum(embed_v, dim=0)
+            pos_v_average.append((embed_add / float(len(phrase_idxs))))
         pos_v_average = torch.stack(pos_v_average)
 
         neg_v_average = []
         for phrase_idxs in neg_v:
             neg_embed_v = self.v_embeddings(phrase_idxs)
-            embed_add = neg_embed_v[0]
-            if len(phrase_idxs) > 1:
-                for i in neg_embed_v[1:]:
-                    embed_add = embed_add + i
+            embed_add = torch.sum(neg_embed_v, dim=0)
             neg_v_average.append(embed_add / float(len(phrase_idxs)))
         neg_v_average = torch.stack(neg_v_average)
 
@@ -58,13 +49,14 @@ class SkipGram(nn.Module):
 
     def forward(self, pos_u, pos_v, neg_v):
         embed_u, embed_v, neg_embed_v = self.get_average_embedings(pos_u, pos_v, neg_v)
+        neg_embed_v = neg_embed_v.view(len(embed_v), self.neg_sample_num, self.embedding_dim)
         embed_score = embed_u.expand_as(embed_v)
         embed_neg = embed_u.expand_as(neg_embed_v)
         score = torch.mul(embed_score, embed_v)
         score = torch.sum(score, dim=1)
         log_target = F.logsigmoid(score)
         neg_score = torch.mul(embed_neg, neg_embed_v)
-        neg_score = torch.sum(neg_score, dim=1)
+        neg_score = torch.sum(neg_score, dim=2)
         sum_log_sampled = F.logsigmoid(-1 * neg_score)
         loss = log_target.sum() + sum_log_sampled.sum()
         return -1 * loss
