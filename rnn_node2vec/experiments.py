@@ -18,7 +18,7 @@ def parse_args():
                         default='/home/paperspace/sotiris/thesis/relation_instances_edgelists/part_of_relations.edgelist',
                         help='Input graph path')
 
-    parser.add_argument('--output', nargs='?', default='part_of_average_words_link_predict.emb',
+    parser.add_argument('--output', nargs='?', default='part_of_rnn_words_link_predict.emb',
                         help='Embeddings path')
 
     parser.add_argument('--dimensions', type=int, default=30,
