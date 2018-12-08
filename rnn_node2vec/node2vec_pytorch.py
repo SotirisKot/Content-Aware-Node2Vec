@@ -3,8 +3,8 @@ import re
 from torch.autograd import Variable
 import torch.optim as optim
 import time
-from rnn_node2vec.node2vec_utils import Utils
-from rnn_node2vec.rnn_skipgram import node2vec_rnn
+from node2vec_utils import Utils
+from rnn_skipgram import node2vec_rnn
 
 bioclean = lambda t: ' '.join(re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
                                      t.replace('"', '').replace('/', '').replace('\\', '').replace("'",
