@@ -76,7 +76,7 @@ class Node2Vec:
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()
-        optimizer = optim.SGD(params, lr=0.01)
+        optimizer = optim.SGD(params, lr=0.02)
         # optimizer = torch.optim.Adam(params, lr=0.01, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
         total_batches = self.utils.get_num_batches(self.batch_size)
         for epoch in range(self.epochs):
