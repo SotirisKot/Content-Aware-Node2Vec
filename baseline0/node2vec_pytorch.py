@@ -1,16 +1,9 @@
-import numpy as np
-import math
-import random
 import torch
-import torch.nn as nn
 from torch.autograd import Variable
 import torch.optim as optim
-import torch.nn.functional as Func
-from torch.optim.lr_scheduler import StepLR
 import time
-from tqdm import tqdm
-from node2vec_utils import Utils
-from skipgram_pytorch import SkipGram
+from rnn_node2vec.node2vec_utils import Utils
+from average_node2vec.skipgram_pytorch import SkipGram
 
 
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
@@ -26,8 +19,8 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        self.odir_checkpoint = 'drive/My Drive/pytorch-node2vec-umls-relations/checkpoints/'
-        self.odir_embeddings = 'drive/My Drive/pytorch-node2vec-umls-relations/embeddings/'
+        self.odir_checkpoint = 'drive/My Drive/node2vec_average_embeddings/checkpoints/'
+        self.odir_embeddings = 'drive/My Drive/node2vec_average_embeddings/embeddings/'
         self.output_file = output_file
         self.wv = {}
 
@@ -36,18 +29,19 @@ class Node2Vec:
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()
-        optimizer = optim.SGD(model.parameters(), lr=0.025)
+        optimizer = optim.SGD(model.parameters(), lr=0.001)
         total_batches = self.utils.get_num_batches(self.batch_size)
         for epoch in range(self.epochs):
             batch_costs = []
             start = time.time()
             batch_num = 0
-            while self.utils.stop:
-                pos_u, pos_v, neg_v, batch_len = self.utils.generate_batch(self.window_size, self.batch_size, self.neg_sample_num)
+            # while self.utils.stop:
+            #     pos_u, pos_v, neg_v, batch_len = self.utils.generate_batch(self.window_size, self.batch_size, self.neg_sample_num)
+            for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
 
-                pos_u = Variable(torch.LongTensor(pos_u))
-                pos_v = Variable(torch.LongTensor(pos_v))
-                neg_v = Variable(torch.LongTensor(neg_v))
+                pos_u = Variable(torch.LongTensor([pos_u]), requires_grad=False)
+                pos_v = Variable(torch.LongTensor(pos_v), requires_grad=False)
+                neg_v = Variable(torch.LongTensor(neg_v), requires_grad=False)
 
                 if torch.cuda.is_available():
                     pos_u = pos_u.cuda()
@@ -55,7 +49,7 @@ class Node2Vec:
                     neg_v = neg_v.cuda()
 
                 optimizer.zero_grad()
-                loss = model(pos_u, pos_v, neg_v, batch_len)
+                loss = model(pos_u, pos_v, neg_v, self.batch_size)
                 loss.backward()
                 optimizer.step()
                 batch_costs.append(loss.cpu().item())

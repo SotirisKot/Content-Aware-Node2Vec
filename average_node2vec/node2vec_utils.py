@@ -1,12 +1,9 @@
 import collections
-import numpy as np
-from collections import deque
-import math
-import os
-import random
-
-from torch.utils.data import Dataset
+import pickle
+import re
 from tqdm import tqdm
+import numpy as np
+import math
 
 np.random.seed(12345)
 data_index = 0
@@ -15,38 +12,46 @@ walk_index = 0
 
 class Utils(object):
     def __init__(self, walks, window_size):
+        self.phrase_dic = clean_dictionary(pickle.load(
+            open('relation_utilities/isa/isa_reversed_dic.p', 'rb')))
+        #self.phrase_dic = clean_dictionary(pickle.load(open('drive/My Drive/node2vec_average_embeddings/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
+        # self.phrase_dic = clean_dictionary(pickle.load(
+        #     open('/home/paperspace/sotiris/thesis/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
         self.stop = True
         self.window_size = window_size
         self.walks = walks
-        data, self.frequencies, self.vocab_words = self.build_dataset(self.walks)
+        data, self.frequencies, self.word2idx, self.idx2word = self.build_dataset(self.walks)
+        self.vocabulary_size = len(self.word2idx)
+        print("Total words: ", self.vocabulary_size)
         self.train_data = data
         # self.current_walk = self.get_walk()
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
 
     def build_word_vocab(self, walks):
-        vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence
+        data_vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence
+        word2idx = {}
+        word2idx['UNKN'] = 0
         for walk in tqdm(walks):
-            for token in walk:
-                vocabulary.append(token)
-        vocab_size = len(vocabulary)
-        return vocab_size, vocabulary
+            for nodeid in walk:
+                data_vocabulary.append(nodeid)
+                phrase = self.phrase_dic[int(nodeid)]
+                phrase = phrase.split()
+                for word in phrase:
+                    try:
+                        gb = word2idx[word]
+                    except KeyError:
+                        word2idx[word] = len(word2idx)
+        data_size_sample_table = len(data_vocabulary)
+        idx2word = dict(zip(word2idx.values(), word2idx.keys()))
+        return data_size_sample_table, data_vocabulary, word2idx, idx2word
 
     def build_dataset(self, walks):
         print('Building dataset..')
-        vocab_size, vocabulary = self.build_word_vocab(walks)
+        data_size_sample_table, vocabulary, word2idx, idx2word = self.build_word_vocab(walks)
         count = []
-        count.extend(collections.Counter(vocabulary).most_common(vocab_size))
-        dictionary = {}
-        for word, _ in count:
-            dictionary[word] = len(dictionary)
-        data = []
-        for walk in tqdm(self.walks):
-            for idx, nodeid in enumerate(walk):
-                index = dictionary[nodeid]
-                walk[idx] = index
-        reversed_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
-        return data, count, reversed_dictionary
+        count.extend(collections.Counter(vocabulary).most_common(data_size_sample_table))
+        return vocabulary, count, word2idx, idx2word
 
     def create_sample_table(self):
         print('Creating sample table..')
@@ -58,7 +63,8 @@ class Utils(object):
         count = np.round(ratio * table_size)
         sample_table = []
         for idx, x in enumerate(count):
-            sample_table += [idx] * int(x)
+            sample = self.frequencies[idx]
+            sample_table += [int(sample[0])] * int(x)
         return np.array(sample_table)
 
     def get_neg_sample_batch(self, pos_pairs, num_neg_samples):
@@ -99,21 +105,22 @@ class Utils(object):
                 buffer = self.current_walk[data_index:data_index + span]
             if self.stop:
                 batch_len += 1
-                pos_u.append(labels[i])
+                # pos_u.append(labels[i])
                 for j in range(span - 1):
-                    # pos_u.append(labels[i])
+                    pos_u.append(labels[i])
                     pos_v.append(context[i, j])
             else:
                 batch_len += 1
-                pos_u.append(labels[i])
+                # pos_u.append(labels[i])
                 for j in range(span - 1):
-                    # pos_u.append(labels[i])
+                    pos_u.append(labels[i])
                     pos_v.append(context[i, j])
                 break
-        neg_v = np.random.choice(self.sample_table, size=(batch_len, neg_samples))
-        return np.array(pos_u), np.array(pos_v), neg_v, batch_len
+        neg_v = np.random.choice(self.sample_table, size=(batch_len * neg_samples)).tolist()
+        return pos_u, pos_v, neg_v, batch_len
 
     def node2vec_yielder(self, window_size, neg_samples):
+        batch = []
         for walk in tqdm(self.walks):
             for idx, phr in enumerate(walk):
                 # for each window position
@@ -121,41 +128,72 @@ class Utils(object):
                 for w in range(-window_size, window_size + 1):
                     context_word_pos = idx + w
                     # make sure not jump out sentence
-                    if context_word_pos < 0 or context_word_pos >= len(walk) or idx == context_word_pos:
+                    if context_word_pos < 0:
+                        break
+                    elif idx + window_size >= len(walk):
+                        break
+                    elif idx == context_word_pos:
                         continue
                     context_word_idx = walk[context_word_pos]
                     pos_context.append(context_word_idx)
-                neg_v = np.random.choice(self.sample_table, size=(neg_samples)).tolist()
-                yield phr, pos_context, neg_v
+                    neg_v = np.random.choice(self.sample_table, size=neg_samples).tolist()
+                    batch.append((phr, pos_context, neg_v))
+                    if len(batch) % 3 == 0:
+                        yield batch
 
     def get_num_batches(self, batch_size):
-        num_batches = len(self.walks) * 80 / batch_size
+        num_batches = len(self.walks) * 80
         num_batches = int(math.ceil(num_batches))
         return num_batches
+
+
+bioclean = lambda t: ' '.join(re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
+                                     t.replace('"', '').replace('/', '').replace('\\', '').replace("'",
+                                                                                                   '').strip().lower()).split()).strip()
+
+
+def get_index(w, vocab):
+    try:
+        return vocab[w]
+    except KeyError:
+        return vocab['UNKN']
+
+
+def phr2idx(phr, word_vocab):
+    p = [get_index(t, word_vocab) for t in phr.split()]
+    return p
+
+
+def clean_dictionary(phrase_dic):
+    for nodeid, phrase in phrase_dic.items():
+        phrase_dic[nodeid] = tokenize(phrase)
+    return phrase_dic
+
+
+def tokenize(x):
+    return bioclean(x)
 
 
 if __name__ == "__main__":
     walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
-             ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
-             ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
-             ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1','9999']]
+             ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
     utils = Utils(walks, 2)
-    # pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=5, batch_size=32, neg_samples=5)
+    # pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=5, batch_size=1, neg_samples=5)
     # print(pos_u)
     # print(len(pos_u))
-    # print(batch_size)
     # print(pos_v)
-    # print(len(neg_v))
-    # print(utils.vocab_words)
-    # for pos_u, pos_v, neg_v in utils.node2vec_yielder(window_size=2, neg_samples=2):
-    #     print(pos_u)
-    #     print(pos_v)
-    #     exit()
-    # while utils.stop:
-    #     pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=2, batch_size=6, neg_samples=5)
-    #     print(pos_u)
-    #     print(pos_v)
+    # print(len(pos_v))
+    # print(batch_size)
+    for batch in utils.node2vec_yielder(window_size=5, neg_samples=3):
+        # pos_u = Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(pos_u)], utils.word2idx)),
+        #                  requires_grad=False)
+        # pos_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
+        #                   requires_grad=False) for item in pos_v]
+        # neg_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
+        #                   requires_grad=False) for item in neg_v]
+        print(batch)
+        #print(pos_v)
     # print(neg_v)
     # neg_v = Variable(torch.LongTensor(neg_v))
     # print(neg_v)

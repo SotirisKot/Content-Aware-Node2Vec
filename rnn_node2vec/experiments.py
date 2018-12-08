@@ -3,19 +3,22 @@ from __future__ import print_function
 import argparse
 import numpy as np
 import networkx as nx
+import node2vec
 import os
 import pickle
-from average_node2vec.node2vec_pytorch import Node2Vec
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_curve, auc, roc_auc_score
+from rnn_node2vec.node2vec_pytorch import Node2Vec
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run node2vec.")
 
     parser.add_argument('--input', nargs='?',
-                        default='drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_relations.edgelist',
+                        default='/home/paperspace/sotiris/thesis/relation_instances_edgelists/part_of_relations.edgelist',
                         help='Input graph path')
 
-    parser.add_argument('--output', nargs='?', default='part_of_baseline_link_predict.emb',
+    parser.add_argument('--output', nargs='?', default='part_of_average_words_link_predict.emb',
                         help='Embeddings path')
 
     parser.add_argument('--dimensions', type=int, default=30,
@@ -122,43 +125,44 @@ def create_train_test_splits(percent_pos, percent_neg, graph):
     print('Creating positive test samples..')
     # shuffle the edges and iterate over them creating the test set
     np.random.shuffle(all_edges)
-    for idx, edge in enumerate(all_edges):
-        if idx % 100 == 0:
-            print('Edge: {}/{}'.format(idx, num_edges))
-            print('Added: ', counter2)
-            print('Not Added: ', counter1)
-        node1 = edge[0]
-        node2 = edge[1]
-        # make sure that the graph remains connected
-        # --from https://github.com/lucashu1/link-prediction/blob/master/gae/preprocessing.py
-        graph.remove_edge(node1, node2)
-        # if not args.directed:
-        #     if nx.number_connected_components(graph) > original_connected_comps:
-        #         graph.add_edge(node1, node2)
-        #         continue
-        reachable_from_v1 = nx.connected._plain_bfs(graph, edge[0])
-        if edge[1] not in reachable_from_v1:
-            graph.add_edge(node1, node2)
-            counter1 += 1
-            continue
-        # remove edges from the train_edges set and add them to the test_edges set --positive samples
-        if len(test_edges) < num_pos_test_edges:
-            test_edges.add(edge)
-            train_edges.remove(edge)
-            counter2 += 1
-        elif len(test_edges) == num_pos_test_edges:
-            if not args.directed:
-                graph.add_edge(node1, node2)
-            break
+    # for idx, edge in enumerate(all_edges):
+    #     if idx % 100 == 0:
+    #         print('Edge: {}/{}'.format(idx, num_edges))
+    #         print('Added: ', counter2)
+    #         print('Not Added: ', counter1)
+    #     node1 = edge[0]
+    #     node2 = edge[1]
+    #     # make sure that the graph remains connected
+    #     # --from https://github.com/lucashu1/link-prediction/blob/master/gae/preprocessing.py
+    #     graph.remove_edge(node1, node2)
+    #     # if not args.directed:
+    #     #     if nx.number_connected_components(graph) > original_connected_comps:
+    #     #         graph.add_edge(node1, node2)
+    #     #         continue
+    #     reachable_from_v1 = nx.connected._plain_bfs(graph, edge[0])
+    #     if edge[1] not in reachable_from_v1:
+    #         graph.add_edge(node1, node2)
+    #         counter1 += 1
+    #         continue
+    #     # remove edges from the train_edges set and add them to the test_edges set --positive samples
+    #     if len(test_edges) < num_pos_test_edges:
+    #         test_edges.add(edge)
+    #         train_edges.remove(edge)
+    #         counter2 += 1
+    #     elif len(test_edges) == num_pos_test_edges:
+    #         if not args.directed:
+    #             graph.add_edge(node1, node2)
+    #         break
 
     # now create false edges for test and train sets..making sure the edge is not a real edge
     # and not already sampled
     # first for test_set
     print('Creating negative test samples..')
     test_false_edges = set()
+    counter = 0
     while len(test_false_edges) < num_neg_test_edges:
-        idx_i = np.random.randint(0, num_nodes)
-        idx_j = np.random.randint(0, num_nodes)
+        idx_i = np.random.randint(0, len(all_nodes))
+        idx_j = np.random.randint(0, len(all_nodes))
         # we dont want to sample the same node
         if idx_i == idx_j:
             continue
@@ -170,8 +174,12 @@ def create_train_test_splits(percent_pos, percent_neg, graph):
         if sampled_edge in test_false_edges:
             continue
         # everything is ok so we add the fake edge to the test_set
+        reachable_from_v1 = nx.connected._plain_bfs(graph, all_nodes[idx_i])
+        if all_nodes[idx_j] in reachable_from_v1:
+            #print(all_nodes[idx_i], all_nodes[idx_j])
+            counter += 1
         test_false_edges.add(sampled_edge)
-
+    print(counter)
     # do the same for the train_set
     print('Creating negative training samples...')
     train_false_edges = set()
@@ -191,6 +199,9 @@ def create_train_test_splits(percent_pos, percent_neg, graph):
         if sampled_edge in train_false_edges:
             continue
         # everything is ok so we add the fake edge to the train_set
+        # reachable_from_v1 = nx.connected._plain_bfs(graph, all_nodes[idx_i])
+        # if all_nodes[idx_j] in reachable_from_v1:
+        #     print(all_nodes[idx_i], all_nodes[idx_j])
         train_false_edges.add(sampled_edge)
 
     # asserts
@@ -205,21 +216,21 @@ def create_train_test_splits(percent_pos, percent_neg, graph):
     test_pos = list(test_edges)
     test_neg = list(test_false_edges)
 
-    odir = 'C:/Users/sotir/PycharmProjects/node2vec_average_embeddings/isa-undirected-dataset-train-test-splits'
-    if not os.path.exists(odir):
-        os.makedirs(odir)
-
-    # save the splits
-    with open("{}.p".format(os.path.join(odir, 'isa_train_pos')), 'wb') as dump_file:
-        pickle.dump(train_pos, dump_file)
-    with open("{}.p".format(os.path.join(odir, 'isa_train_neg')), 'wb') as dump_file:
-        pickle.dump(train_neg, dump_file)
-    with open("{}.p".format(os.path.join(odir, 'isa_test_pos')), 'wb') as dump_file:
-        pickle.dump(test_pos, dump_file)
-    with open("{}.p".format(os.path.join(odir, 'isa_test_neg')), 'wb') as dump_file:
-        pickle.dump(test_neg, dump_file)
-
-    nx.write_edgelist(graph, os.path.join(odir, 'isa_train_graph_undirected.edgelist'))
+    # odir = 'tributary_of-undirected-dataset-train-test-splits'
+    # if not os.path.exists(odir):
+    #     os.makedirs(odir)
+    #
+    # # save the splits
+    # with open("{}.p".format(os.path.join(odir, 'tributary_of_train_pos')), 'wb') as dump_file:
+    #     pickle.dump(train_pos, dump_file)
+    # with open("{}.p".format(os.path.join(odir, 'tributary_of_train_neg')), 'wb') as dump_file:
+    #     pickle.dump(train_neg, dump_file)
+    # with open("{}.p".format(os.path.join(odir, 'tributary_of_test_pos')), 'wb') as dump_file:
+    #     pickle.dump(test_pos, dump_file)
+    # with open("{}.p".format(os.path.join(odir, 'tributary_of_test_neg')), 'wb') as dump_file:
+    #     pickle.dump(test_neg, dump_file)
+    # #
+    # nx.write_edgelist(graph, os.path.join(odir, 'tributary_of_train_graph_undirected.edgelist'))
     return train_pos, train_neg, test_pos, test_neg
 
 
@@ -247,19 +258,27 @@ def load_embeddings(file):
             word = line[0]
             embedding = [float(x) for x in line[1:]]
             assert len(embedding) == 128
-            node_embeddings[word] = embedding
+            node_embeddings[word] = np.array(embedding)
     return node_embeddings
 
 
 def main(args):
     # nx_G = read_graph(file=args.input, get_connected_graph=False, remove_selfloops=True)
     # print(nx_G.number_of_nodes(), nx_G.number_of_edges())
-    # train_pos = pickle.load(open('drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_train_pos.p', 'rb'))
-    # test_pos = pickle.load(open('drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_test_pos.p', 'rb'))
+    # train_pos = pickle.load(open(
+    #     '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_pos.p',
+    #     'rb'))
+    # test_pos = pickle.load(open(
+    #     '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_pos.p',
+    #     'rb'))
     # train_neg = pickle.load(
-    #     open('drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_train_neg.p', 'rb'))
+    #     open(
+    #         '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_neg.p',
+    #         'rb'))
     # test_neg = pickle.load(
-    #     open('drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_test_neg.p', 'rb'))
+    #     open(
+    #         '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_neg.p',
+    #         'rb'))
     # # train_pos, train_neg, test_pos, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
     # # train_neg, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
     # print('Number of positive training samples: ', len(train_pos))
@@ -267,7 +286,7 @@ def main(args):
     # print('Number of positive testing samples: ', len(test_pos))
     # print('Number of negative testing samples: ', len(test_neg))
     # train_graph = read_graph(
-    #     file='drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_train_graph_undirected.edgelist',
+    #     file='/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_graph_undirected.edgelist',
     #     get_connected_graph=False, remove_selfloops=False)
     # print(
     #     'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))

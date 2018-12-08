@@ -14,7 +14,7 @@ class SkipGram(nn.Module):
     def __init__(self, vocab_size, embedding_dim, neg_sample_num, batch_size, window_size):
         super(SkipGram, self).__init__()
         self.u_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
-        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
+        # self.v_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
         self.embedding_dim = embedding_dim
         self.neg_sample_num = neg_sample_num
         self.batch_size = batch_size
@@ -24,7 +24,7 @@ class SkipGram(nn.Module):
     def init_emb(self):
         initrange = 0.5 / self.embedding_dim
         self.u_embeddings.weight.data.uniform_(-initrange, initrange)
-        self.v_embeddings.weight.data.uniform_(-0, 0)
+        # self.v_embeddings.weight.data.uniform_(-0, 0)
 
     def get_average_embedings(self, pos_u, pos_v, neg_v):
         embed_u = self.u_embeddings(pos_u)
@@ -33,14 +33,14 @@ class SkipGram(nn.Module):
 
         pos_v_average = []
         for phrase_idxs in pos_v:
-            embed_v = self.v_embeddings(phrase_idxs)
+            embed_v = self.u_embeddings(phrase_idxs)
             embed_add = torch.sum(embed_v, dim=0)
             pos_v_average.append((embed_add / float(len(phrase_idxs))))
         pos_v_average = torch.stack(pos_v_average)
 
         neg_v_average = []
         for phrase_idxs in neg_v:
-            neg_embed_v = self.v_embeddings(phrase_idxs)
+            neg_embed_v = self.u_embeddings(phrase_idxs)
             embed_add = torch.sum(neg_embed_v, dim=0)
             neg_v_average.append(embed_add / float(len(phrase_idxs)))
         neg_v_average = torch.stack(neg_v_average)

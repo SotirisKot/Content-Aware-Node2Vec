@@ -1,14 +1,10 @@
-import numpy as np
-import math
-import random
 import torch
 import re
 from torch.autograd import Variable
 import torch.optim as optim
-from tqdm import tqdm
 import time
-from node2vec_utils import Utils
-from skipgram_pytorch import SkipGram
+from average_node2vec.node2vec_utils import Utils
+from average_node2vec.skipgram_pytorch import SkipGram
 
 bioclean = lambda t: ' '.join(re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
                                      t.replace('"', '').replace('/', '').replace('\\', '').replace("'",
@@ -47,10 +43,10 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        # self.odir_checkpoint = 'drive/My Drive/pytorch-node2vec-umls-relations/checkpoints/'
-        # self.odir_embeddings = 'drive/My Drive/pytorch-node2vec-umls-relations/embeddings/'
-        self.odir_checkpoint = '/home/paperspace/sotiris/'
-        self.odir_embeddings = '/home/paperspace/sotiris/'
+        self.odir_checkpoint = 'drive/My Drive/pytorch-node2vec-umls-relations/checkpoints/'
+        self.odir_embeddings = 'drive/My Drive/pytorch-node2vec-umls-relations/embeddings/'
+        # self.odir_checkpoint = '/home/paperspace/sotiris/'
+        # self.odir_embeddings = '/home/paperspace/sotiris/'
         self.output_file = output_file
         self.wv = {}
 
@@ -72,12 +68,9 @@ class Node2Vec:
             for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
 
                 if torch.cuda.is_available():
-                    pos_u = Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(pos_u)], self.utils.word2idx)),
-                                     requires_grad=False).cuda()
-                    pos_v = [Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)),
-                                      requires_grad=False).cuda() for item in pos_v]
-                    neg_v = [Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)),
-                                      requires_grad=False).cuda() for item in neg_v]
+                    pos_u = torch.LongTensor(phr2idx(self.utils.phrase_dic[int(pos_u)], self.utils.word2idx)).cuda()
+                    pos_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)).cuda() for item in pos_v]
+                    neg_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)).cuda() for item in neg_v]
                 else:
                     pos_u = Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(pos_u)], self.utils.word2idx)),
                                      requires_grad=False)

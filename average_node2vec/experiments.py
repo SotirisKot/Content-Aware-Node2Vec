@@ -6,11 +6,9 @@ import networkx as nx
 import node2vec
 import os
 import pickle
-from tqdm import tqdm
-from pprint import pprint
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve, auc, roc_auc_score
-from node2vec_pytorch import Node2Vec
+from average_node2vec.node2vec_pytorch import Node2Vec
 
 
 def parse_args():
