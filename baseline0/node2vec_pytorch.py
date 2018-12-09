@@ -38,8 +38,8 @@ class Node2Vec:
             model.cuda()
         optimizer = optim.SGD(model.parameters(), lr=0.025)
         total_batches = self.utils.get_num_batches(self.batch_size)
-        dataset = Node2VecDataset('dataset.txt')
-        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False, num_workers=8)
+        dataset = Node2VecDataset('dataset.txt', self.utils)
+        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False)
         for epoch in range(self.epochs):
             batch_costs = []
             start = time.time()
@@ -51,7 +51,6 @@ class Node2Vec:
                 pos_u = sample['center']
                 pos_v = sample['context']
                 neg_v = np.random.choice(self.utils.sample_table, size=(pos_u.shape[0], self.neg_sample_num))
-
                 pos_u = Variable(torch.LongTensor(pos_u), requires_grad=False)
                 pos_v = Variable(torch.LongTensor(pos_v), requires_grad=False)
                 neg_v = Variable(torch.LongTensor(neg_v), requires_grad=False)
