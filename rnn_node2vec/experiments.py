@@ -91,7 +91,7 @@ def learn_embeddings(walks):
     print('Creating walk corpus..')
     walks = [list(map(str, walk)) for walk in walks]  # this is for python3
     model = Node2Vec(walks=walks, output_file=args.output, embedding_dim=args.dimensions,
-                     epochs=args.iter, batch_size=32, window_size=args.window_size, neg_sample_num=2)
+                     epochs=args.iter, batch_size=128, window_size=args.window_size, neg_sample_num=2)
     print('Optimization started...')
     model.train()
     embeddings = model.wv
@@ -296,7 +296,9 @@ def main(args):
     walks = G.simulate_walks(args.num_walks, args.walk_length)
     # walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
     #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
-    #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
+    #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
+    #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
+    #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1', '9999']]
     node_embeddings = learn_embeddings(walks)
 
     # for training

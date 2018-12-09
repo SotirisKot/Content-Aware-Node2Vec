@@ -25,7 +25,7 @@ class node2vec_rnn(nn.Module):
         print(self.rnn_size)
         self.scale = scale
         self.max_norm = max_norm
-        self.h0 = nn.Parameter(torch.randn(1, 1, self.rnn_size).uniform_(-self.scale, self.scale))
+        self.h0 = nn.Parameter(torch.randn(1, self.batch_size, self.rnn_size).uniform_(-self.scale, self.scale))
         self.the_rnn = nn.GRU(input_size=self.embedding_dim, hidden_size=self.rnn_size, num_layers=1, bidirectional=False,
                               bias=True, dropout=0, batch_first=True)
         self.init_weights(self.scale)
@@ -41,45 +41,48 @@ class node2vec_rnn(nn.Module):
             nn.init.uniform_(param, a=-scale, b=scale)
 
     def fix_input(self, phr_inds, pos_inds, neg_inds):
-        phr = Variable(torch.LongTensor(phr_inds), requires_grad=False).cuda()
-        pos = [Variable(torch.LongTensor(pos_ind), requires_grad=False).cuda() for pos_ind in pos_inds]
-        neg = [Variable(torch.LongTensor(neg_ind), requires_grad=False).cuda() for neg_ind in neg_inds]
+        phr = [Variable(torch.LongTensor(phr_ind), requires_grad=False) for phr_ind in phr_inds]
+        pos = [Variable(torch.LongTensor(pos_ind), requires_grad=False) for pos_ind in pos_inds]
+        neg = [Variable(torch.LongTensor(neg_ind), requires_grad=False) for neg_ind in neg_inds]
         return phr, pos, neg
 
     def get_words_embeds(self, phr, pos, neg):
-        phr = self.u_embeddings(phr)
+        phr = [self.u_embeddings(p) for p in phr]
+        phr = torch.stack(phr)
         pos = [self.v_embeddings(p) for p in pos]
+        pos = torch.stack(pos)
         neg = [self.v_embeddings(n) for n in neg]
+        neg = torch.stack(neg)
         return phr, pos, neg
 
     def rnn_representation_one(self, inp):
-        inp, hn = self.the_rnn(inp.unsqueeze(0), self.h0)
-        inp = inp.squeeze(0)[-1]
+        inp, hn = self.the_rnn(inp, self.h0)
+        inp = inp[:, -1, :]
         return inp
 
     def get_rnn_representation(self, phr, pos, neg):
         phr = self.rnn_representation_one(phr)
-        pos = torch.stack([self.rnn_representation_one(p) for p in pos], dim=0)
+        pos = self.rnn_representation_one(pos)
+        neg = neg.view(phr.size(0), self.neg_sample_num, -1, self.embedding_dim).permute(1, 0, 2, 3)
         neg = torch.stack([self.rnn_representation_one(n) for n in neg], dim=0)
+        neg = neg.permute(1, 0, 2)
         return phr, pos, neg
 
-    def get_loss(self, phr_emb, context_emb, neg_emb):
-        embed_score = phr_emb.expand_as(context_emb)
-        embed_neg = phr_emb.expand_as(neg_emb)
-        score = torch.mul(embed_score, context_emb)
+    def get_loss(self, phr_emb, context_emb, neg_emb, batch_size):
+        score = torch.mul(phr_emb, context_emb)
         score = torch.sum(score, dim=1)
         log_target = F.logsigmoid(score)
-        neg_score = torch.mul(embed_neg, neg_emb)
-        neg_score = torch.sum(neg_score, dim=1)
+        neg_score = torch.bmm(neg_emb, phr_emb.unsqueeze(2)).squeeze()
         sum_log_sampled = F.logsigmoid(-1 * neg_score)
-        loss = -(log_target.sum() + sum_log_sampled.sum())
-        return loss
+        sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
+        loss = log_target + sum_log_sampled
+        return -1 * loss.sum() / float(batch_size)
 
-    def forward(self, phr_inds, pos_inds, neg_inds):
+    def forward(self, phr_inds, pos_inds, neg_inds, batch_size):
         phr, pos, neg = self.fix_input(phr_inds, pos_inds, neg_inds)
         phr, pos, neg = self.get_words_embeds(phr, pos, neg)
         phr, pos, neg = self.get_rnn_representation(phr, pos, neg)
-        loss = self.get_loss(phr, pos, neg)
+        loss = self.get_loss(phr, pos, neg, batch_size)
         return loss
 
     def save_embeddings(self, file_name, idx2word, use_cuda=False):

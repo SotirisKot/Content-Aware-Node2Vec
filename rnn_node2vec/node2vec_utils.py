@@ -4,6 +4,8 @@ import re
 from tqdm import tqdm
 import numpy as np
 import math
+from pprint import pprint
+from keras.preprocessing.sequence import pad_sequences
 
 np.random.seed(12345)
 data_index = 0
@@ -13,7 +15,7 @@ walk_index = 0
 class Utils(object):
     def __init__(self, walks, window_size):
         # self.phrase_dic = clean_dictionary(pickle.load(
-        #     open('C:/Users/sotir/PycharmProjects/thesis/relation_utilities/isa/isa_reversed_dic.p', 'rb')))
+        #      open('C:/Users/sotir/PycharmProjects/thesis/relation_utilities/isa/isa_reversed_dic.p', 'rb')))
         # self.phrase_dic = clean_dictionary(pickle.load(open('drive/My Drive/node2vec_average_embeddings/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
         self.phrase_dic = clean_dictionary(pickle.load(
             open('/home/paperspace/sotiris/thesis/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
@@ -24,14 +26,17 @@ class Utils(object):
         self.vocabulary_size = len(self.word2idx)
         print("Total words: ", self.vocabulary_size)
         self.train_data = data
-        # self.current_walk = self.get_walk()
+        self.current_walk = self.get_walk()
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
+        # Create dataset for data loading
+        self.node2vec_yielder(self.window_size)
 
     def build_word_vocab(self, walks):
         data_vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence
         word2idx = {}
-        word2idx['UNKN'] = 0
+        word2idx['PAD'] = 0
+        word2idx['UNKN'] = len(word2idx)
         for walk in tqdm(walks):
             for nodeid in walk:
                 data_vocabulary.append(nodeid)
@@ -84,7 +89,8 @@ class Utils(object):
     def generate_batch(self, window_size, batch_size, neg_samples):
         global data_index
         span = 2 * window_size + 1
-        context = np.ndarray(shape=(batch_size, 2 * window_size), dtype=np.int64)
+        # context = np.ndarray(shape=(batch_size, 2 * window_size), dtype=np.int64)
+        context = []
         labels = np.ndarray(shape=(batch_size), dtype=np.int64)
         if data_index + span > len(self.current_walk):
             data_index = 0
@@ -93,8 +99,11 @@ class Utils(object):
         pos_v = []
         batch_len = 0
         for i in range(batch_size):
+            print(i)
             data_index += 1
-            context[i, :] = buffer[:window_size] + buffer[window_size + 1:]
+            if len(context) == 0 or i > len(context):
+                context = (buffer[:window_size] + buffer[window_size + 1:])
+            # print(context)
             labels[i] = buffer[window_size]
             if data_index + span > len(self.current_walk):
                 data_index = 0
@@ -105,21 +114,41 @@ class Utils(object):
                 buffer = self.current_walk[data_index:data_index + span]
             if self.stop:
                 batch_len += 1
-                # pos_u.append(labels[i])
-                for j in range(span - 1):
-                    pos_u.append(labels[i])
-                    pos_v.append(context[i, j])
+                pos_u.append(labels[i])
+                print(context[i])
+                pos_v.append(context[i])
             else:
                 batch_len += 1
-                # pos_u.append(labels[i])
-                for j in range(span - 1):
-                    pos_u.append(labels[i])
-                    pos_v.append(context[i, j])
+                pos_u.append(labels[i])
+                pos_v.append(context[i])
                 break
         neg_v = np.random.choice(self.sample_table, size=(batch_len * neg_samples)).tolist()
         return pos_u, pos_v, neg_v, batch_len
 
-    def node2vec_yielder(self, window_size, neg_samples):
+    def node2vec_yielder(self, window_size):
+        with open('dataset.txt', 'w') as dataset:
+            for walk in tqdm(self.walks):
+                for idx, phr in enumerate(walk):
+                    # for each window position
+                    pos_context = []
+                    for w in range(-window_size, window_size + 1):
+                        context_word_pos = idx + w
+                        # make sure not jump out sentence
+                        if context_word_pos < 0:
+                            break
+                        elif idx + window_size >= len(walk):
+                            break
+                        elif idx == context_word_pos:
+                            continue
+                        context_word_idx = walk[context_word_pos]
+                        pos_context.append(context_word_idx)
+                    if len(pos_context) != 0:
+                        # neg_v = np.random.choice(self.sample_table, size=neg_samples).tolist()
+                        for pos in pos_context:
+                            dataset.write(phr + ' ' + pos + '\n')
+
+    def node2vec_batch_yielder(self, window_size, neg_samples, batch_size):
+        batch, max_phr_len, max_pos_len, max_neg_len = [], 0, 0, 0
         for walk in tqdm(self.walks):
             for idx, phr in enumerate(walk):
                 # for each window position
@@ -137,7 +166,20 @@ class Utils(object):
                     pos_context.append(context_word_idx)
                 if len(pos_context) != 0:
                     neg_v = np.random.choice(self.sample_table, size=neg_samples).tolist()
-                    yield phr, pos_context, neg_v
+                    phr = phr2idx(self.phrase_dic[int(phr)], self.word2idx)
+                    pos_context = [phr2idx(self.phrase_dic[int(item)], self.word2idx) for item in pos_context]
+                    neg_v = [phr2idx(self.phrase_dic[int(item)], self.word2idx) for item in neg_v]
+                    max_phr_len = max([max_phr_len, len(phr)])
+                    max_pos_len = max([max_pos_len] + [len(pos_ind) for pos_ind in pos_context])
+                    max_neg_len = max([max_neg_len] + [len(neg_ind) for neg_ind in neg_v])
+
+                    batch.append((phr, pos_context, neg_v))
+                    if len(batch) % batch_size == 0:
+                        batch_phr_inds = pad_sequences(sequences=[b[0] for b in batch], maxlen=max_phr_len)
+                        batch_pos_inds = np.stack([pad_sequences(sequences=b[1], maxlen=max_pos_len) for b in batch])
+                        batch_neg_inds = np.stack([pad_sequences(sequences=b[2], maxlen=max_neg_len) for b in batch])
+                        batch = []
+                        yield batch_phr_inds, batch_pos_inds, batch_neg_inds
 
     def get_num_batches(self, batch_size):
         num_batches = len(self.walks) * 80 / batch_size
@@ -177,23 +219,25 @@ if __name__ == "__main__":
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
     utils = Utils(walks, 2)
-    # pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=5, batch_size=1, neg_samples=5)
-    # print(pos_u)
-    # print(len(pos_u))
-    # print(pos_v)
-    # print(len(pos_v))
+    pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=5, batch_size=32, neg_samples=5)
+    print(pos_u)
+    print(len(pos_u))
+    print(pos_v)
+    print(len(pos_v))
     # print(batch_size)
-    for pos_u, pos_v, neg_v in utils.node2vec_yielder(window_size=5, neg_samples=3):
-        # pos_u = Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(pos_u)], utils.word2idx)),
-        #                  requires_grad=False)
-        # pos_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
-        #                   requires_grad=False) for item in pos_v]
-        # neg_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
-        #                   requires_grad=False) for item in neg_v]
-        print('heyyyyyyy')
-        print(pos_u)
-        print(pos_v)
-        #print(pos_v)
+    # for batch_phr_inds, batch_pos_inds, batch_neg_inds in utils.node2vec_batch_yielder(window_size=5, neg_samples=3, batch_size=3):
+    #     # pos_u = Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(pos_u)], utils.word2idx)),
+    #     #                  requires_grad=False)
+    #     # pos_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
+    #     #                   requires_grad=False) for item in pos_v]
+    #     # neg_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
+    #     #                   requires_grad=False) for item in neg_v]
+    #     # print('heyyyyyyy')
+    #     # print(pos_u)
+    #     # print(pos_v)
+    #     print(batch_phr_inds.shape)
+    #     print(batch_pos_inds)
+    #     print(batch_neg_inds.shape)
     # print(neg_v)
     # neg_v = Variable(torch.LongTensor(neg_v))
     # print(neg_v)

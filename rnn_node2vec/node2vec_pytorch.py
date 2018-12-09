@@ -5,6 +5,11 @@ import torch.optim as optim
 import time
 from node2vec_utils import Utils
 from rnn_skipgram import node2vec_rnn
+from torch.utils.data import DataLoader
+from dataloader import Node2VecDataset
+import numpy as np
+from tqdm import tqdm
+from keras.preprocessing.sequence import pad_sequences
 
 bioclean = lambda t: ' '.join(re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
                                      t.replace('"', '').replace('/', '').replace('\\', '').replace("'",
@@ -66,6 +71,8 @@ class Node2Vec:
         self.odir_embeddings = '/home/paperspace/sotiris/'
         self.output_file = output_file
         self.wv = {}
+        self.dataset = Node2VecDataset('dataset.txt')
+        self.dataloader = DataLoader(dataset=self.dataset, batch_size=self.batch_size, shuffle=False, num_workers=2)
 
     def train(self):
         model = node2vec_rnn(self.vocabulary_size, self.embedding_dim, self.rnn_size, self.neg_sample_num,
@@ -76,40 +83,50 @@ class Node2Vec:
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()
-        #optimizer = optim.SGD(params, lr=0.02)
+        # optimizer = optim.SGD(params, lr=0.01)
         optimizer = torch.optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
         total_batches = self.utils.get_num_batches(self.batch_size)
+
         for epoch in range(self.epochs):
+            model.train()
             batch_num = 0
             batch_costs = []
             start = time.time()
-            # while self.utils.stop:
-            #     pos_u, pos_v, neg_v, batch_size = self.utils.generate_batch(self.window_size, self.batch_size,
-            #                                                                 self.neg_sample_num)
-            for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
+            for sample in tqdm(self.dataloader):
+                print(len(self.dataloader.dataset))
+                max_phr_len = 0
+                max_pos_len = 0
+                max_neg_len = 0
+                center = sample['center']
+                context = sample['context']
+                neg_v = np.random.choice(self.utils.sample_table, size=(center.shape[0] * self.neg_sample_num)).tolist()
 
-                pos_u = phr2idx(self.utils.phrase_dic[int(pos_u)], self.utils.word2idx)
-                pos_v = [phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx) for item in pos_v]
-                neg_v = [phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx) for item in neg_v]
+                phr = [phr2idx(self.utils.phrase_dic[int(phr)], self.word2idx) for phr in center]
+                max_phr_len = max([max_phr_len] + [len(pos_u) for pos_u in phr])
+
+                pos_context = [phr2idx(self.utils.phrase_dic[int(item)], self.word2idx) for item in context]
+                max_pos_len = max([max_pos_len] + [len(pos_ind) for pos_ind in pos_context])
+
+                neg_v = [phr2idx(self.utils.phrase_dic[int(item)], self.word2idx) for item in neg_v]
+                max_neg_len = max([max_neg_len] + [len(neg_ind) for neg_ind in neg_v])
+
+                batch_phr_inds = np.stack(pad_sequences(sequences=[b for b in phr], maxlen=max_phr_len))
+                batch_pos_inds = np.stack(pad_sequences(sequences=[b for b in pos_context], maxlen=max_pos_len))
+                batch_neg_inds = np.stack(pad_sequences(sequences=[b for b in neg_v], maxlen=max_neg_len))
+
                 optimizer.zero_grad()
-                instance_cost = model(pos_u, pos_v, neg_v)
-                batch_costs.append(instance_cost)
-
-                if len(batch_costs) == self.batch_size:
-                    batch_cost = sum(batch_costs) / float(len(batch_costs))
-                    batch_cost.backward()
-                    optimizer.step()
-                    optimizer.zero_grad()
-                    batch_aver_cost = batch_cost.cpu().item()
+                loss = model(batch_phr_inds, batch_pos_inds, batch_neg_inds, batch_phr_inds.shape[0])
+                loss.backward()
+                optimizer.step()
+                batch_costs.append(loss.cpu().item())
+                if batch_num % 100 == 0:
+                    print('Batches Average Loss: {}, Batches: {}/{} '.format(
+                        sum(batch_costs) / float(len(batch_costs)),
+                        batch_num, total_batches))
+                    print('It took', time.time() - start, 'seconds.')
+                    start = time.time()
                     batch_costs = []
-                    # print(batch_aver_cost)
-                    if batch_num % 10 == 0:
-                        print('Batches Average Loss: {}, Batches: {}/{} '.format(
-                            batch_aver_cost,
-                            batch_num, total_batches))
-                        print('It took', time.time() - start, 'seconds.')
-                        start = time.time()
-                    batch_num += 1
+                batch_num += 1
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             save_checkpoint(state,
@@ -117,5 +134,6 @@ class Node2Vec:
                                 epoch + 1))
             self.utils.stop = True
         print("Optimization Finished!")
-        self.wv = model.save_embeddings(file_name=self.odir_embeddings + self.output_file, idx2word=self.utils.idx2word,
-                                        use_cuda=True)
+        self.wv = model.save_embeddings(file_name=self.odir_embeddings + self.output_file,
+                                             idx2word=self.utils.idx2word,
+                                             use_cuda=True)
