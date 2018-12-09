@@ -72,7 +72,7 @@ class Node2Vec:
         self.output_file = output_file
         self.wv = {}
         self.dataset = Node2VecDataset('dataset.txt')
-        self.dataloader = DataLoader(dataset=self.dataset, batch_size=self.batch_size, shuffle=False, num_workers=2)
+        self.dataloader = DataLoader(dataset=self.dataset, batch_size=self.batch_size, shuffle=False, num_workers=6)
 
     def train(self):
         model = node2vec_rnn(self.vocabulary_size, self.embedding_dim, self.rnn_size, self.neg_sample_num,
@@ -83,8 +83,8 @@ class Node2Vec:
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()
-        optimizer = optim.SGD(params, lr=0.025)
-        # optimizer = torch.optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+        # optimizer = optim.SGD(params, lr=0.025)
+        optimizer = torch.optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
         total_batches = self.utils.get_num_batches(self.batch_size)
 
         for epoch in range(self.epochs):
