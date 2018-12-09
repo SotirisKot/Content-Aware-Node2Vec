@@ -119,6 +119,7 @@ class Node2Vec:
                 loss.backward()
                 optimizer.step()
                 batch_costs.append(loss.cpu().item())
+                del batch_phr_inds, batch_pos_inds, batch_neg_inds
                 if batch_num % 100 == 0:
                     print('Batches Average Loss: {}, Batches: {}/{} '.format(
                         sum(batch_costs) / float(len(batch_costs)),

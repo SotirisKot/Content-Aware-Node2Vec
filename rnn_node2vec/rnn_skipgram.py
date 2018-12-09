@@ -41,9 +41,9 @@ class node2vec_rnn(nn.Module):
             nn.init.uniform_(param, a=-scale, b=scale)
 
     def fix_input(self, phr_inds, pos_inds, neg_inds):
-        phr = [Variable(torch.LongTensor(phr_ind), requires_grad=False) for phr_ind in phr_inds]
-        pos = [Variable(torch.LongTensor(pos_ind), requires_grad=False) for pos_ind in pos_inds]
-        neg = [Variable(torch.LongTensor(neg_ind), requires_grad=False) for neg_ind in neg_inds]
+        phr = [Variable(torch.LongTensor(phr_ind), requires_grad=False).cuda() for phr_ind in phr_inds]
+        pos = [Variable(torch.LongTensor(pos_ind), requires_grad=False).cuda() for pos_ind in pos_inds]
+        neg = [Variable(torch.LongTensor(neg_ind), requires_grad=False).cuda() for neg_ind in neg_inds]
         return phr, pos, neg
 
     def get_words_embeds(self, phr, pos, neg):
