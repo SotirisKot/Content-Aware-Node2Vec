@@ -3,8 +3,13 @@ import re
 from torch.autograd import Variable
 import torch.optim as optim
 import time
+import numpy as np
+from tqdm import tqdm
+
 from average_node2vec.node2vec_utils import Utils
 from average_node2vec.skipgram_pytorch import SkipGram
+from dataloader import Node2VecDataset
+from torch.utils.data import Dataset, DataLoader
 
 bioclean = lambda t: ' '.join(re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
                                      t.replace('"', '').replace('/', '').replace('\\', '').replace("'",
@@ -43,10 +48,10 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        self.odir_checkpoint = 'drive/My Drive/pytorch-node2vec-umls-relations/checkpoints/'
-        self.odir_embeddings = 'drive/My Drive/pytorch-node2vec-umls-relations/embeddings/'
-        # self.odir_checkpoint = '/home/paperspace/sotiris/'
-        # self.odir_embeddings = '/home/paperspace/sotiris/'
+        # self.odir_checkpoint = 'drive/My Drive/pytorch-node2vec-umls-relations/checkpoints/'
+        # self.odir_embeddings = 'drive/My Drive/pytorch-node2vec-umls-relations/embeddings/'
+        self.odir_checkpoint = '/home/paperspace/sotiris/'
+        self.odir_embeddings = '/home/paperspace/sotiris/'
         self.output_file = output_file
         self.wv = {}
 
@@ -58,6 +63,8 @@ class Node2Vec:
             model.cuda()
         optimizer = optim.SGD(model.parameters(), lr=0.025)
         total_batches = self.utils.get_num_batches(self.batch_size)
+        dataset = Node2VecDataset('dataset.txt')
+        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False)
         for epoch in range(self.epochs):
             instance_num = 0
             instance_costs = []
@@ -65,27 +72,32 @@ class Node2Vec:
             # while self.utils.stop:
             #     pos_u, pos_v, neg_v, batch_size = self.utils.generate_batch(self.window_size, self.batch_size,
             #                                                                 self.neg_sample_num)
-            for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
+            # for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
+            for sample in tqdm(dataloader):
+                pos_u = sample['center']
+                pos_v = sample['context']
+                size = pos_u.shape[0]
+                neg_v = np.random.choice(self.utils.sample_table, size=(size * self.neg_sample_num)).tolist()
 
                 if torch.cuda.is_available():
-                    pos_u = torch.LongTensor(phr2idx(self.utils.phrase_dic[int(pos_u)], self.utils.word2idx)).cuda()
+                    pos_u = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)).cuda() for item in pos_u]
                     pos_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)).cuda() for item in pos_v]
                     neg_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)).cuda() for item in neg_v]
                 else:
-                    pos_u = Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(pos_u)], self.utils.word2idx)),
-                                     requires_grad=False)
+                    pos_u = [Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)),
+                                     requires_grad=False) for item in pos_u]
                     pos_v = [Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)),
                                       requires_grad=False) for item in pos_v]
                     neg_v = [Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)),
                                       requires_grad=False) for item in neg_v]
 
                 optimizer.zero_grad()
-                loss = model(pos_u, pos_v, neg_v)
+                loss = model(pos_u, pos_v, neg_v, size)
                 loss.backward()
                 optimizer.step()
                 instance_costs.append(loss.cpu().item())
                 if instance_num % 5000 == 0:
-                    print('Instances Average Loss: {}, instances: {}/{} '.format(
+                    print('Batches Average Loss: {}, Batches: {}/{} '.format(
                         sum(instance_costs) / float(len(instance_costs)),
                         instance_num, total_batches))
                     print('It took', time.time() - start, 'seconds.')
