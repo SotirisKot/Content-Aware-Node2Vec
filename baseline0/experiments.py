@@ -15,7 +15,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run node2vec.")
 
     parser.add_argument('--input', nargs='?',
-                        default='drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_relations.edgelist',
+                        default='/home/paperspace/sotiris/thesis/relation_instances_edgelists/part_of_relations.edgelist',
                         help='Input graph path')
 
     parser.add_argument('--output', nargs='?', default='part_of_baseline_link_predict.emb',
