@@ -6,8 +6,8 @@ import time
 import numpy as np
 from tqdm import tqdm
 
-from average_node2vec.node2vec_utils import Utils
-from average_node2vec.skipgram_pytorch import SkipGram
+from node2vec_utils import Utils
+from skipgram_pytorch import SkipGram
 from dataloader import Node2VecDataset
 from torch.utils.data import Dataset, DataLoader
 
