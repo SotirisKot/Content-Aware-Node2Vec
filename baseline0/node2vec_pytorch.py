@@ -39,7 +39,7 @@ class Node2Vec:
         optimizer = optim.SGD(model.parameters(), lr=0.025)
         total_batches = self.utils.get_num_batches(self.batch_size)
         dataset = Node2VecDataset('dataset.txt')
-        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False)
+        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False, num_workers=8)
         for epoch in range(self.epochs):
             batch_costs = []
             start = time.time()

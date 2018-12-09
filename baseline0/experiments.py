@@ -15,7 +15,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run node2vec.")
 
     parser.add_argument('--input', nargs='?',
-                        default='/home/paperspace/sotiris/thesis/relation_instances_edgelists/part_of_relations.edgelist',
+                        default='drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_relations.edgelist',
                         help='Input graph path')
 
     parser.add_argument('--output', nargs='?', default='part_of_baseline_link_predict.emb',
@@ -257,6 +257,32 @@ def load_embeddings(file):
 def main(args):
     nx_G = read_graph(file=args.input, get_connected_graph=False, remove_selfloops=True)
     print(nx_G.number_of_nodes(), nx_G.number_of_edges())
+    # train_pos = pickle.load(open(
+    #     'drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_train_pos.p',
+    #     'rb'))
+    # test_pos = pickle.load(open(
+    #     'drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_test_pos.p',
+    #     'rb'))
+    # train_neg = pickle.load(
+    #     open(
+    #         'drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_train_neg.p',
+    #         'rb'))
+    # test_neg = pickle.load(
+    #     open(
+    #         'drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_test_neg.p',
+    #         'rb'))
+    # # train_pos, train_neg, test_pos, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
+    # # train_neg, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
+    # print('Number of positive training samples: ', len(train_pos))
+    # print('Number of negative training samples: ', len(train_neg))
+    # print('Number of positive testing samples: ', len(test_pos))
+    # print('Number of negative testing samples: ', len(test_neg))
+    # train_graph = read_graph(
+    #     file='drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_train_graph_undirected.edgelist',
+    #     get_connected_graph=False, remove_selfloops=False)
+    # print(
+    #     'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
+    # print('Number of connected components: ', nx.number_connected_components(train_graph))
     train_pos = pickle.load(open(
         '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_pos.p',
         'rb'))
