@@ -2,8 +2,13 @@ import torch
 from torch.autograd import Variable
 import torch.optim as optim
 import time
-from rnn_node2vec.node2vec_utils import Utils
-from average_node2vec.skipgram_pytorch import SkipGram
+from node2vec_utils import Utils
+from skipgram_pytorch import SkipGram
+from tqdm import tqdm
+import numpy as np
+
+from dataloader import Node2VecDataset
+from torch.utils.data import Dataset, DataLoader
 
 
 def save_checkpoint(state, filename='checkpoint.pth.tar'):
@@ -19,8 +24,10 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        self.odir_checkpoint = 'drive/My Drive/node2vec_average_embeddings/checkpoints/'
-        self.odir_embeddings = 'drive/My Drive/node2vec_average_embeddings/embeddings/'
+        # self.odir_checkpoint = 'drive/My Drive/node2vec_average_embeddings/checkpoints/'
+        # self.odir_embeddings = 'drive/My Drive/node2vec_average_embeddings/embeddings/'
+        self.odir_checkpoint = '/home/paperspace/sotiris/'
+        self.odir_embeddings = '/home/paperspace/sotiris/'
         self.output_file = output_file
         self.wv = {}
 
@@ -29,17 +36,23 @@ class Node2Vec:
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()
-        optimizer = optim.SGD(model.parameters(), lr=0.001)
+        optimizer = optim.SGD(model.parameters(), lr=0.025)
         total_batches = self.utils.get_num_batches(self.batch_size)
+        dataset = Node2VecDataset('dataset.txt')
+        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False)
         for epoch in range(self.epochs):
             batch_costs = []
             start = time.time()
             batch_num = 0
             # while self.utils.stop:
             #     pos_u, pos_v, neg_v, batch_len = self.utils.generate_batch(self.window_size, self.batch_size, self.neg_sample_num)
-            for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
+            # for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
+            for sample in tqdm(dataloader):
+                pos_u = sample['center']
+                pos_v = sample['context']
+                neg_v = np.random.choice(self.utils.sample_table, size=(pos_u.shape[0], self.neg_sample_num))
 
-                pos_u = Variable(torch.LongTensor([pos_u]), requires_grad=False)
+                pos_u = Variable(torch.LongTensor(pos_u), requires_grad=False)
                 pos_v = Variable(torch.LongTensor(pos_v), requires_grad=False)
                 neg_v = Variable(torch.LongTensor(neg_v), requires_grad=False)
 
@@ -49,7 +62,7 @@ class Node2Vec:
                     neg_v = neg_v.cuda()
 
                 optimizer.zero_grad()
-                loss = model(pos_u, pos_v, neg_v, self.batch_size)
+                loss = model(pos_u, pos_v, neg_v, pos_u.shape[0])
                 loss.backward()
                 optimizer.step()
                 batch_costs.append(loss.cpu().item())
@@ -64,7 +77,7 @@ class Node2Vec:
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             save_checkpoint(state,
-                            filename=self.odir_checkpoint + 'part_of_checkpoint_epoch_{}.pth.tar'.format(
+                            filename=self.odir_checkpoint + 'part_of_baseline_checkpoint_epoch_{}.pth.tar'.format(
                                 epoch + 1))
             self.utils.stop = True
         print("Optimization Finished!")
