@@ -83,8 +83,8 @@ class Node2Vec:
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()
-        # optimizer = optim.SGD(params, lr=0.01)
-        optimizer = torch.optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+        optimizer = optim.SGD(params, lr=0.025)
+        # optimizer = torch.optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
         total_batches = self.utils.get_num_batches(self.batch_size)
 
         for epoch in range(self.epochs):
@@ -93,7 +93,6 @@ class Node2Vec:
             batch_costs = []
             start = time.time()
             for sample in tqdm(self.dataloader):
-                print(len(self.dataloader.dataset))
                 max_phr_len = 0
                 max_pos_len = 0
                 max_neg_len = 0
@@ -120,7 +119,7 @@ class Node2Vec:
                 optimizer.step()
                 batch_costs.append(loss.cpu().item())
                 del batch_phr_inds, batch_pos_inds, batch_neg_inds
-                if batch_num % 100 == 0:
+                if batch_num % 500 == 0:
                     print('Batches Average Loss: {}, Batches: {}/{} '.format(
                         sum(batch_costs) / float(len(batch_costs)),
                         batch_num, total_batches))
