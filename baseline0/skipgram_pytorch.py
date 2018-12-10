@@ -7,7 +7,7 @@ import torch.backends.cudnn as cudnn
 my_seed = 1997
 torch.manual_seed(my_seed)
 torch.cuda.manual_seed(my_seed)
-cudnn.benchmark = True
+# cudnn.benchmark = True
 
 
 class SkipGram(nn.Module):
@@ -33,8 +33,8 @@ class SkipGram(nn.Module):
         neg_score = torch.bmm(neg_embed_v, embed_u.unsqueeze(2)).squeeze()
         sum_log_sampled = F.logsigmoid(-1 * neg_score)
         sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
-        loss = log_target + sum_log_sampled
-        return -1 * loss.sum() / float(batch_size)
+        loss = - (log_target + sum_log_sampled)
+        return torch.mean(loss)
 
     def save_embeddings(self, file_name, idx2word, use_cuda=False):
         wv = {}
