@@ -13,8 +13,8 @@ cudnn.benchmark = True
 class SkipGram(nn.Module):
     def __init__(self, vocab_size, embedding_dim):
         super(SkipGram, self).__init__()
-        self.u_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
-        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
+        self.u_embeddings = nn.Embedding(vocab_size, embedding_dim)
+        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim)
         self.embedding_dim = embedding_dim
         self.init_emb()
 
@@ -23,7 +23,7 @@ class SkipGram(nn.Module):
         self.u_embeddings.weight.data.uniform_(-initrange, initrange)
         self.v_embeddings.weight.data.uniform_(-0, 0)
 
-    def forward(self, pos_u, pos_v, neg_v, batch_size):
+    def forward(self, pos_u, pos_v, neg_v):
         embed_u = self.u_embeddings(pos_u)
         embed_v = self.v_embeddings(pos_v)
         neg_embed_v = self.v_embeddings(neg_v)
@@ -33,8 +33,8 @@ class SkipGram(nn.Module):
         neg_score = torch.bmm(neg_embed_v, embed_u.unsqueeze(2)).squeeze()
         sum_log_sampled = F.logsigmoid(-1 * neg_score)
         sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
-        loss = log_target + sum_log_sampled
-        return -1 * loss.sum() / float(batch_size)
+        loss = - (log_target + sum_log_sampled)
+        return torch.mean(loss)
 
     def save_embeddings(self, file_name, idx2word, use_cuda=False):
         wv = {}
