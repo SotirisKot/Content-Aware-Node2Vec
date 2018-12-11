@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 import networkx as nx
 import os
-from node2vec_pytorch import Node2Vec
+from baseline0.baseline_node2vec_pytorch import Node2Vec
 import node2vec
 import pickle
 from sklearn.linear_model import LogisticRegression
@@ -277,12 +277,12 @@ def main(args):
     # print('Number of negative training samples: ', len(train_neg))
     # print('Number of positive testing samples: ', len(test_pos))
     # print('Number of negative testing samples: ', len(test_neg))
-    train_graph = read_graph(
-        file='drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_train_graph_undirected.edgelist',
-        get_connected_graph=False, remove_selfloops=False)
-    print(
-        'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
-    print('Number of connected components: ', nx.number_connected_components(train_graph))
+    # train_graph = read_graph(
+    #     file='drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_train_graph_undirected.edgelist',
+    #     get_connected_graph=False, remove_selfloops=False)
+    # print(
+    #     'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
+    # print('Number of connected components: ', nx.number_connected_components(train_graph))
     train_pos = pickle.load(open(
         '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_pos.p',
         'rb'))

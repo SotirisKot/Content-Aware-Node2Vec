@@ -6,28 +6,25 @@ from collections import deque
 import math
 import os
 import random
-
-from cffi.backend_ctypes import xrange
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-np.random.seed(12345)
+np.random.seed(1997)
 data_index = 0
 walk_index = 0
 
 
 class Utils(object):
-    def __init__(self, walks, window_size, neg_sample_num):
+    def __init__(self, walks, window_size):
         self.stop = True
         self.window_size = window_size
         self.walks = walks
-        self.neg_sample_num = neg_sample_num
         data, self.frequencies, self.vocab_words = self.build_dataset(self.walks)
         self.train_data = data
-        self.current_walk = self.get_walk()
+        self.create_save_dataset(self.window_size)
+        # self.current_walk = self.get_walk()
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
-        # self.node2vec_yielder(self.window_size)
 
     def build_word_vocab(self, walks):
         vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence
@@ -118,47 +115,61 @@ class Utils(object):
         neg_v = np.random.choice(self.sample_table, size=(batch_len * 2 * window_size, neg_samples))
         return np.array(pos_u), np.array(pos_v), neg_v, batch_len
 
-    def node2vec_yielder(self, window_size):
-        for i in xrange(0, len(self.walks)):
-            a_random_walk = self.walks[i]
-            train_input_batch = np.array([a_random_walk[j] for j in xrange(len(a_random_walk) - 2 * window_size)])
-            train_context_batch = np.array(
-                [a_random_walk[j + 1:j + 1 + 2 * window_size] for j in xrange(len(a_random_walk) - 2 * window_size)])
-            yield train_input_batch, train_context_batch
-        # for walk in tqdm(self.walks):
-        #     for idx, phr in enumerate(walk):
-        #         # for each window position
-        #         pos_context = []
-        #         for w in range(-window_size, window_size + 1):
-        #             context_word_pos = idx + w
-        #             # make sure not jump out sentence
-        #             if context_word_pos < 0 or context_word_pos >= len(walk) or idx == context_word_pos:
-        #                 continue
-        #             context_word_idx = walk[context_word_pos]
-        #             pos_context.append(context_word_idx)
-        #         neg_v = np.random.choice(self.sample_table, size=(neg_samples)).tolist()
-        #         yield phr, pos_context, neg_v
+    # def node2vec_yielder(self, window_size, neg_samples):
+    #     for walk in tqdm(self.walks):
+    #         for idx, phr in enumerate(walk):
+    #             # for each window position
+    #             pos_context = []
+    #             for w in range(-window_size, window_size + 1):
+    #                 context_word_pos = idx + w
+    #                 # make sure not jump out sentence
+    #                 if context_word_pos < 0 or context_word_pos >= len(walk) or idx == context_word_pos:
+    #                     continue
+    #                 context_word_idx = walk[context_word_pos]
+    #                 pos_context.append(context_word_idx)
+    #             neg_v = np.random.choice(self.sample_table, size=(neg_samples)).tolist()
+    #             yield phr, pos_context, neg_v
 
-    # def node2vec_yielder(self, window_size):
-    #     with open('dataset.txt', 'w') as dataset:
-    #         for walk in tqdm(self.walks):
-    #             for idx, phr in enumerate(walk):
-    #                 # for each window position
-    #                 pos_context = []
-    #                 for w in range(-window_size, window_size + 1):
-    #                     context_word_pos = idx + w
-    #                     # make sure not jump out sentence
-    #                     if context_word_pos < 0:
-    #                         break
-    #                     elif idx + window_size >= len(walk):
-    #                         break
-    #                     elif idx == context_word_pos:
-    #                         continue
-    #                     context_word_idx = walk[context_word_pos]
-    #                     pos_context.append(context_word_idx)
-    #                 if len(pos_context) != 0:
-    #                     for pos in pos_context:
-    #                         dataset.write(str(phr) + ' ' + str(pos) + '\n')
+    # def node2vec_yielder(self, window_size, batch_size):
+    #     batch_pairs = []
+    #     for walk in tqdm(self.walks):
+    #         for idx, phr in enumerate(walk):
+    #             # for each window position
+    #             for w in range(-window_size, window_size + 1):
+    #                 context_word_pos = idx + w
+    #                 # make sure not jump out sentence
+    #                 if context_word_pos < 0:
+    #                     break
+    #                 elif idx + window_size >= len(walk):
+    #                     break
+    #                 elif idx == context_word_pos:
+    #                     continue
+    #                 batch_pairs.append((phr, walk[context_word_pos]))
+    #                 if len(batch_pairs) == batch_size:
+    #                     yielded_batch = batch_pairs
+    #                     batch_pairs = []
+    #                     yield yielded_batch
+
+    def create_save_dataset(self, window_size):
+        with open('dataset.txt', 'w') as dataset:
+            for walk in tqdm(self.walks):
+                for idx, phr in enumerate(walk):
+                    # for each window position
+                    pos_context = []
+                    for w in range(-window_size, window_size + 1):
+                        context_word_pos = idx + w
+                        # make sure not jump out sentence
+                        if context_word_pos < 0:
+                            break
+                        elif idx + window_size >= len(walk):
+                            break
+                        elif idx == context_word_pos:
+                            continue
+                        context_word_idx = walk[context_word_pos]
+                        pos_context.append(context_word_idx)
+                    if len(pos_context) != 0:
+                        for pos in pos_context:
+                            dataset.write(str(phr) + ' ' + str(pos) + '\n')
 
     def get_num_batches(self, batch_size):
         num_batches = len(self.walks) * 80 / batch_size
@@ -175,13 +186,14 @@ if __name__ == "__main__":
     walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
              ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
-    utils = Utils(walks, 2, 5)
-    pos_u, pos_v, neg_v, batch_size = utils.generate_batch(window_size=5, batch_size=32, neg_samples=5)
-    pprint(pos_u)
-    print(len(pos_u))
-    print(batch_size)
-    pprint(pos_v)
-    print(neg_v.shape)
+    utils = Utils(walks, 2)
+    for batch_pairs in utils.node2vec_yielder(window_size=5, batch_size=64):
+        print(batch_pairs)
+
+    # print(len(pos_u))
+    # print(batch_size)
+    # pprint(pos_v)
+    # print(neg_v)
     print(utils.vocab_words)
     # for pos_u, pos_v in utils.node2vec_yielder(window_size=2):
     #     print(pos_u)
