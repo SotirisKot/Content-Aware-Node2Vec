@@ -2,8 +2,8 @@ import torch
 from torch.autograd import Variable
 import torch.optim as optim
 import time
-from baseline0.baseline_node2vec_utils import Utils
-from baseline0.baseline_skipgram_pytorch import SkipGram
+from baseline_node2vec_utils import Utils
+from baseline_skipgram_pytorch import SkipGram
 from torch.utils.data import DataLoader
 from dataloader import Node2VecDataset
 from tqdm import tqdm

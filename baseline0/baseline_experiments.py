@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 import networkx as nx
 import os
-from baseline0.baseline_node2vec_pytorch import Node2Vec
+from baseline_node2vec_pytorch import Node2Vec
 import node2vec
 import pickle
 from sklearn.linear_model import LogisticRegression
