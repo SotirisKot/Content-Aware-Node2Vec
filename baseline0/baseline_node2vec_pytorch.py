@@ -56,7 +56,7 @@ class Node2Vec:
             print('GPU available!!')
             model.cuda()
 
-        optimizer = optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+        optimizer = optim.Adam(params, lr=0.001)
         dataset = Node2VecDataset(self.utils, self.batch_size, self.neg_sample_num)
         dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False)
 

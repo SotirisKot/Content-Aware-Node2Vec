@@ -7,7 +7,7 @@ import torch.backends.cudnn as cudnn
 my_seed = 1997
 torch.manual_seed(my_seed)
 torch.cuda.manual_seed(my_seed)
-cudnn.benchmark = True
+# cudnn.benchmark = True
 
 
 class SkipGram(nn.Module):

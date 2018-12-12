@@ -39,4 +39,5 @@ class Node2VecDataset(Dataset):
                         break
                     elif idx == context_word_pos:
                         continue
-                    yield phr, walk[context_word_pos]
+                    context_word_idx = walk[context_word_pos]
+                    yield phr, context_word_idx
