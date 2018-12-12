@@ -17,10 +17,10 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run node2vec.")
 
     parser.add_argument('--input', nargs='?',
-                        default='drive/My Drive/pytorch-node2vec-umls-relations/part_of-undirected-dataset-train-test-splits/part_of_relations.edgelist',
+                        default='/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_relations.edgelist',
                         help='Input graph path')
 
-    parser.add_argument('--output', nargs='?', default='part_of_baseline_link_predict.emb',
+    parser.add_argument('--output', nargs='?', default='part_of_baseline_2_link_predict.emb',
                         help='Embeddings path')
 
     parser.add_argument('--dimensions', type=int, default=30,
@@ -257,47 +257,21 @@ def load_embeddings(file):
 
 
 def main(args):
-    # nx_G = read_graph(file=args.input, get_connected_graph=False, remove_selfloops=True)
-    # print(nx_G.number_of_nodes(), nx_G.number_of_edges())
-    train_pos = pickle.load(open(
-        'C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_pos.p',
-        'rb'))
-    test_pos = pickle.load(open(
-        'C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_pos.p',
-        'rb'))
-    train_neg = pickle.load(
-        open(
-            'C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_neg.p',
-            'rb'))
-    test_neg = pickle.load(
-        open(
-            'C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_neg.p',
-            'rb'))
-    # train_pos, train_neg, test_pos, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
-    # train_neg, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
-    print('Number of positive training samples: ', len(train_pos))
-    print('Number of negative training samples: ', len(train_neg))
-    print('Number of positive testing samples: ', len(test_pos))
-    print('Number of negative testing samples: ', len(test_neg))
-    train_graph = read_graph(
-        file='C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_graph_undirected.edgelist',
-        get_connected_graph=False, remove_selfloops=False)
-    print(
-        'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
-    print('Number of connected components: ', nx.number_connected_components(train_graph))
+    nx_G = read_graph(file=args.input, get_connected_graph=False, remove_selfloops=True)
+    print(nx_G.number_of_nodes(), nx_G.number_of_edges())
     # train_pos = pickle.load(open(
-    #     '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_pos.p',
+    #     'C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_pos.p',
     #     'rb'))
     # test_pos = pickle.load(open(
-    #     '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_pos.p',
+    #     'C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_pos.p',
     #     'rb'))
     # train_neg = pickle.load(
     #     open(
-    #         '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_neg.p',
+    #         'C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_neg.p',
     #         'rb'))
     # test_neg = pickle.load(
     #     open(
-    #         '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_neg.p',
+    #         'C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_neg.p',
     #         'rb'))
     # # train_pos, train_neg, test_pos, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
     # # train_neg, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
@@ -306,18 +280,44 @@ def main(args):
     # print('Number of positive testing samples: ', len(test_pos))
     # print('Number of negative testing samples: ', len(test_neg))
     # train_graph = read_graph(
-    #     file='/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_graph_undirected.edgelist',
+    #     file='C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_graph_undirected.edgelist',
     #     get_connected_graph=False, remove_selfloops=False)
     # print(
     #     'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
     # print('Number of connected components: ', nx.number_connected_components(train_graph))
-    # G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
-    # G.preprocess_transition_probs()
-    # walks = G.simulate_walks(args.num_walks, args.walk_length)
+    train_pos = pickle.load(open(
+        '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_pos.p',
+        'rb'))
+    test_pos = pickle.load(open(
+        '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_pos.p',
+        'rb'))
+    train_neg = pickle.load(
+        open(
+            '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_neg.p',
+            'rb'))
+    test_neg = pickle.load(
+        open(
+            '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_neg.p',
+            'rb'))
+    # train_pos, train_neg, test_pos, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
+    # train_neg, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
+    print('Number of positive training samples: ', len(train_pos))
+    print('Number of negative training samples: ', len(train_neg))
+    print('Number of positive testing samples: ', len(test_pos))
+    print('Number of negative testing samples: ', len(test_neg))
+    train_graph = read_graph(
+        file='/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_graph_undirected.edgelist',
+        get_connected_graph=False, remove_selfloops=False)
+    print(
+        'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
+    print('Number of connected components: ', nx.number_connected_components(train_graph))
+    G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
+    G.preprocess_transition_probs()
+    walks = G.simulate_walks(args.num_walks, args.walk_length)
     # walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
     #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
     #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1']]
-    node_embeddings = load_embeddings('part_of_baseline_link_predict.emb')
+    node_embeddings = learn_embeddings(walks)
 
     # for training
     train_pos_edge_embs = get_edge_embeddings(train_pos, node_embeddings)

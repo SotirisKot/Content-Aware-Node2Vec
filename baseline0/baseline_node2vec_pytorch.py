@@ -41,10 +41,10 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        self.odir_checkpoint = 'drive/My Drive/node2vec_average_embeddings/checkpoints/'
-        self.odir_embeddings = 'drive/My Drive/node2vec_average_embeddings/embeddings/'
-        # self.odir_checkpoint = '/home/paperspace/sotiris/thesis/baseline0/'
-        # self.odir_embeddings = '/home/paperspace/sotiris/thesis/baseline0/'
+        # self.odir_checkpoint = 'drive/My Drive/node2vec_average_embeddings/checkpoints/'
+        # self.odir_embeddings = 'drive/My Drive/node2vec_average_embeddings/embeddings/'
+        self.odir_checkpoint = '/home/paperspace/sotiris/thesis/baseline0/'
+        self.odir_embeddings = '/home/paperspace/sotiris/thesis/baseline0/'
         self.output_file = output_file
         self.wv = {}
 
@@ -71,9 +71,6 @@ class Node2Vec:
                 pos_u = Variable(torch.LongTensor(pos_u))
                 pos_v = Variable(torch.LongTensor(pos_v))
 
-                print(pos_u)
-                print(pos_v)
-
                 if torch.cuda.is_available():
                     pos_u = pos_u.cuda()
                     pos_v = pos_v.cuda()
@@ -95,7 +92,7 @@ class Node2Vec:
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             save_checkpoint(state,
-                            filename=self.odir_checkpoint + 'part_of_baseline_checkpoint_epoch_{}.pth.tar'.format(
+                            filename=self.odir_checkpoint + 'part_of_baseline_2_checkpoint_epoch_{}.pth.tar'.format(
                                 epoch + 1))
             self.utils.stop = True
         print("Optimization Finished!")
