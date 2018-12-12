@@ -148,6 +148,7 @@ class Utils(object):
                         yielded_batch = batch_pairs
                         batch_pairs = []
                         yield yielded_batch
+        yield None
 
     def create_save_dataset(self, window_size):
         with open('dataset.txt', 'w') as dataset:

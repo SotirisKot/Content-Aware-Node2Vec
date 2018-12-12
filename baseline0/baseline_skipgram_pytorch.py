@@ -13,8 +13,8 @@ torch.cuda.manual_seed(my_seed)
 class SkipGram(nn.Module):
     def __init__(self, vocab_size, embedding_dim):
         super(SkipGram, self).__init__()
-        self.u_embeddings = nn.Embedding(vocab_size, embedding_dim)
-        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim)
+        self.u_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
+        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
         self.embedding_dim = embedding_dim
         self.init_emb()
 
