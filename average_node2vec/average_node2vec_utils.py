@@ -11,7 +11,7 @@ walk_index = 0
 
 
 class Utils(object):
-    def __init__(self, walks, window_size):
+    def __init__(self, walks, window_size, walk_length):
         # self.phrase_dic = clean_dictionary(pickle.load(
         #     open('C:/Users/sotir/PycharmProjects/thesis/relation_utilities/isa/isa_reversed_dic.p', 'rb')))
         # self.phrase_dic = clean_dictionary(pickle.load(open('drive/My Drive/node2vec_average_embeddings/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
@@ -19,6 +19,7 @@ class Utils(object):
             open('/home/paperspace/sotiris/thesis/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
         self.stop = True
         self.window_size = window_size
+        self.walk_length = walk_length
         self.walks = walks
         data, self.frequencies, self.word2idx, self.idx2word = self.build_dataset(self.walks)
         self.vocabulary_size = len(self.word2idx)

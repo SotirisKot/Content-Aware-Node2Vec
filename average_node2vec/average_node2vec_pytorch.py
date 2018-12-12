@@ -53,9 +53,9 @@ def print_params(model):
 
 
 class Node2Vec:
-    def __init__(self, walks, output_file, embedding_dim=128, epochs=10, batch_size=32, window_size=10,
+    def __init__(self, walks, output_file, walk_length, embedding_dim=128, epochs=10, batch_size=32, window_size=10,
                  neg_sample_num=5):
-        self.utils = Utils(walks, window_size)
+        self.utils = Utils(walks, window_size, walk_length)
         self.vocabulary_size = self.utils.vocabulary_size
         self.node2phr = self.utils.phrase_dic
         self.word2idx = self.utils.word2idx
