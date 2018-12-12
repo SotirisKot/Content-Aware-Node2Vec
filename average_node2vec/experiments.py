@@ -8,7 +8,7 @@ import os
 import pickle
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve, auc, roc_auc_score
-from node2vec_pytorch import Node2Vec
+from average_node2vec_pytorch import Node2Vec
 
 
 def parse_args():
@@ -18,7 +18,7 @@ def parse_args():
                         default='/home/paperspace/sotiris/thesis/relation_instances_edgelists/part_of_relations.edgelist',
                         help='Input graph path')
 
-    parser.add_argument('--output', nargs='?', default='part_of_average_words_link_predict.emb',
+    parser.add_argument('--output', nargs='?', default='part_of_average_2_words_link_predict.emb',
                         help='Embeddings path')
 
     parser.add_argument('--dimensions', type=int, default=30,

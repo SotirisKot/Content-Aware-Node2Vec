@@ -6,10 +6,10 @@ import time
 import numpy as np
 from tqdm import tqdm
 
-from node2vec_utils import Utils
-from skipgram_pytorch import SkipGram
-from dataloader import Node2VecDataset
-from torch.utils.data import Dataset, DataLoader
+from average_node2vec_utils import Utils
+from average_skipgram_pytorch import SkipGram
+from average_dataloader import Node2VecDataset
+from torch.utils.data import DataLoader
 
 bioclean = lambda t: ' '.join(re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
                                      t.replace('"', '').replace('/', '').replace('\\', '').replace("'",
@@ -36,6 +36,22 @@ def phr2idx(phr, word_vocab):
     return p
 
 
+def print_params(model):
+    print(40 * '=')
+    print(model)
+    print(40 * '=')
+    total_params = 0
+    for parameter in model.parameters():
+        # print(parameter.size())
+        v = 1
+        for s in parameter.size():
+            v *= s
+        total_params += v
+    print(40 * '=')
+    print(total_params)
+    print(40 * '=')
+
+
 class Node2Vec:
     def __init__(self, walks, output_file, embedding_dim=128, epochs=10, batch_size=32, window_size=10,
                  neg_sample_num=5):
@@ -58,21 +74,19 @@ class Node2Vec:
     def train(self):
         model = SkipGram(self.vocabulary_size, self.embedding_dim, self.neg_sample_num, self.batch_size,
                          self.window_size)
+        print_params(model)
+        params = model.parameters()
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()
-        optimizer = optim.SGD(model.parameters(), lr=0.025)
-        total_batches = self.utils.get_num_batches(self.batch_size)
-        dataset = Node2VecDataset('dataset.txt')
+
+        optimizer = optim.SparseAdam(params, lr=0.001)
+        dataset = Node2VecDataset(self.utils, self.neg_sample_num)
         dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False)
+
         for epoch in range(self.epochs):
-            instance_num = 0
-            instance_costs = []
-            start = time.time()
-            # while self.utils.stop:
-            #     pos_u, pos_v, neg_v, batch_size = self.utils.generate_batch(self.window_size, self.batch_size,
-            #                                                                 self.neg_sample_num)
-            # for pos_u, pos_v, neg_v in self.utils.node2vec_yielder(self.window_size, self.neg_sample_num):
+            batch_num = 0
+            batch_costs = []
             for sample in tqdm(dataloader):
                 pos_u = sample['center']
                 pos_v = sample['context']
@@ -84,30 +98,27 @@ class Node2Vec:
                     pos_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)).cuda() for item in pos_v]
                     neg_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)).cuda() for item in neg_v]
                 else:
-                    pos_u = [Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)),
-                                     requires_grad=False) for item in pos_u]
-                    pos_v = [Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)),
-                                      requires_grad=False) for item in pos_v]
-                    neg_v = [Variable(torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)),
-                                      requires_grad=False) for item in neg_v]
+                    pos_u = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)) for item in pos_u]
+                    pos_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)) for item in pos_v]
+                    neg_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)) for item in neg_v]
 
                 optimizer.zero_grad()
-                loss = model(pos_u, pos_v, neg_v, size)
+                loss = model(pos_u, pos_v, neg_v)
                 loss.backward()
                 optimizer.step()
-                instance_costs.append(loss.cpu().item())
-                if instance_num % 5000 == 0:
-                    print('Batches Average Loss: {}, Batches: {}/{} '.format(
-                        sum(instance_costs) / float(len(instance_costs)),
-                        instance_num, total_batches))
-                    print('It took', time.time() - start, 'seconds.')
-                    start = time.time()
-                    instance_costs = []
-                instance_num += 1
+                batch_costs.append(loss.cpu().item())
+
+                if batch_num % 5000 == 0:
+                    print('Batches Average Loss: {}, Batches: {} '.format(
+                        sum(batch_costs) / float(len(batch_costs)),
+                        batch_num))
+                    batch_costs = []
+                batch_num += 1
+
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             save_checkpoint(state,
-                            filename=self.odir_checkpoint + 'part_of_average_checkpoint_epoch_{}.pth.tar'.format(
+                            filename=self.odir_checkpoint + 'part_of_average_2_checkpoint_epoch_{}.pth.tar'.format(
                                 epoch + 1))
             self.utils.stop = True
         print("Optimization Finished!")

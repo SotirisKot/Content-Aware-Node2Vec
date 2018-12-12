@@ -14,7 +14,7 @@ class Utils(object):
     def __init__(self, walks, window_size):
         # self.phrase_dic = clean_dictionary(pickle.load(
         #     open('C:/Users/sotir/PycharmProjects/thesis/relation_utilities/isa/isa_reversed_dic.p', 'rb')))
-        #self.phrase_dic = clean_dictionary(pickle.load(open('drive/My Drive/node2vec_average_embeddings/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
+        # self.phrase_dic = clean_dictionary(pickle.load(open('drive/My Drive/node2vec_average_embeddings/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
         self.phrase_dic = clean_dictionary(pickle.load(
             open('/home/paperspace/sotiris/thesis/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
         self.stop = True
@@ -27,7 +27,7 @@ class Utils(object):
         # self.current_walk = self.get_walk()
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
-        self.node2vec_yielder(self.window_size)
+        # self.node2vec_yielder(self.window_size)
 
     def build_word_vocab(self, walks):
         data_vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence
@@ -216,7 +216,7 @@ if __name__ == "__main__":
         # neg_v = [Variable(torch.LongTensor(phr2idx(utils.phrase_dic[int(item)], utils.word2idx)),
         #                   requires_grad=False) for item in neg_v]
         print(batch)
-        #print(pos_v)
+        # print(pos_v)
     # print(neg_v)
     # neg_v = Variable(torch.LongTensor(neg_v))
     # print(neg_v)
