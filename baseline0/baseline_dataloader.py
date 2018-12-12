@@ -23,7 +23,6 @@ class Node2VecDataset(Dataset):
 
     def __getitem__(self, index):
         phr, context = next(self.data_gen)
-        # neg_v = np.random.choice(self.utils.sample_table, size=self.neg_samples)
         sample = {'center': phr, 'context': context}
         return sample
 

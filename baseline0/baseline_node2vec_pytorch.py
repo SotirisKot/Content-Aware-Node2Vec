@@ -58,7 +58,7 @@ class Node2Vec:
 
         optimizer = optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
         dataset = Node2VecDataset(self.utils, self.batch_size, self.neg_sample_num)
-        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False, drop_last=True)
+        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False)
 
         for epoch in range(self.epochs):
             batch_num = 0
@@ -66,7 +66,7 @@ class Node2Vec:
             for index, sample in enumerate(tqdm(dataloader)):
                 pos_u = sample['center']
                 pos_v = sample['context']
-                neg_v = np.random.choice(self.utils.sample_table, size=(self.batch_size, self.neg_sample_num))
+                neg_v = np.random.choice(self.utils.sample_table, size=(pos_u.shape[0], self.neg_sample_num))
 
                 pos_u = Variable(torch.LongTensor(pos_u))
                 pos_v = Variable(torch.LongTensor(pos_v))
@@ -82,7 +82,6 @@ class Node2Vec:
                 loss.backward()
                 optimizer.step()
                 batch_costs.append(loss.cpu().item())
-                del pos_u, pos_v, neg_v
 
                 if index % 5000 == 0:
                     print('Batches Average Loss: {}, Batches: {}'.format(
