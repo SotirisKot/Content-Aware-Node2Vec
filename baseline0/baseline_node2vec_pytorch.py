@@ -58,7 +58,7 @@ class Node2Vec:
 
         optimizer = optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
         dataset = Node2VecDataset(self.utils, self.batch_size, self.neg_sample_num)
-        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False)
+        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False, drop_last=True)
 
         for epoch in range(self.epochs):
             batch_num = 0
@@ -66,10 +66,11 @@ class Node2Vec:
             for index, sample in enumerate(tqdm(dataloader)):
                 pos_u = sample['center']
                 pos_v = sample['context']
-                neg_v = sample['neg']  # it is already a long tensor
+                neg_v = np.random.choice(self.utils.sample_table, size=(self.batch_size, self.neg_sample_num))
 
                 pos_u = Variable(torch.LongTensor(pos_u))
                 pos_v = Variable(torch.LongTensor(pos_v))
+                neg_v = Variable(torch.LongTensor(neg_v))
 
                 if torch.cuda.is_available():
                     pos_u = pos_u.cuda()
@@ -92,7 +93,7 @@ class Node2Vec:
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             save_checkpoint(state,
-                            filename=self.odir_checkpoint + 'part_of_baseline_2_checkpoint_epoch_{}.pth.tar'.format(
+                            filename=self.odir_checkpoint + 'part_of_baseline_3_checkpoint_epoch_{}.pth.tar'.format(
                                 epoch + 1))
             self.utils.stop = True
         print("Optimization Finished!")
