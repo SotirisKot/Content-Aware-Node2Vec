@@ -87,10 +87,11 @@ class Node2Vec:
         for epoch in range(self.epochs):
             batch_num = 0
             batch_costs = []
+
             for sample in tqdm(dataloader):
                 pos_u = sample['center']
                 pos_v = sample['context']
-                size = pos_u.shape[0]
+                size = len(pos_u)
                 neg_v = np.random.choice(self.utils.sample_table, size=(size * self.neg_sample_num)).tolist()
 
                 if torch.cuda.is_available():
