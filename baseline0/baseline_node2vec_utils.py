@@ -15,14 +15,13 @@ walk_index = 0
 
 
 class Utils(object):
-    def __init__(self, walks, window_size):
+    def __init__(self, walks, window_size, walk_length):
         self.stop = True
+        self.walk_length = walk_length
         self.window_size = window_size
         self.walks = walks
         data, self.frequencies, self.vocab_words = self.build_dataset(self.walks)
         self.train_data = data
-        self.create_save_dataset(self.window_size)
-        # self.current_walk = self.get_walk()
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
 
@@ -115,40 +114,40 @@ class Utils(object):
         neg_v = np.random.choice(self.sample_table, size=(batch_len * 2 * window_size, neg_samples))
         return np.array(pos_u), np.array(pos_v), neg_v, batch_len
 
-    # def node2vec_yielder(self, window_size, neg_samples):
-    #     for walk in tqdm(self.walks):
-    #         for idx, phr in enumerate(walk):
-    #             # for each window position
-    #             pos_context = []
-    #             for w in range(-window_size, window_size + 1):
-    #                 context_word_pos = idx + w
-    #                 # make sure not jump out sentence
-    #                 if context_word_pos < 0 or context_word_pos >= len(walk) or idx == context_word_pos:
-    #                     continue
-    #                 context_word_idx = walk[context_word_pos]
-    #                 pos_context.append(context_word_idx)
-    #             neg_v = np.random.choice(self.sample_table, size=(neg_samples)).tolist()
-    #             yield phr, pos_context, neg_v
+    def node2vec_yielder(self, window_size, neg_samples):
+        for walk in tqdm(self.walks):
+            for idx, phr in enumerate(walk):
+                # for each window position
+                pos_context = []
+                for w in range(-window_size, window_size + 1):
+                    context_word_pos = idx + w
+                    # make sure not jump out sentence
+                    if context_word_pos < 0 or context_word_pos >= len(walk) or idx == context_word_pos:
+                        continue
+                    context_word_idx = walk[context_word_pos]
+                    pos_context.append(context_word_idx)
+                neg_v = np.random.choice(self.sample_table, size=(neg_samples)).tolist()
+                yield phr, pos_context, neg_v
 
-    # def node2vec_yielder(self, window_size, batch_size):
-    #     batch_pairs = []
-    #     for walk in tqdm(self.walks):
-    #         for idx, phr in enumerate(walk):
-    #             # for each window position
-    #             for w in range(-window_size, window_size + 1):
-    #                 context_word_pos = idx + w
-    #                 # make sure not jump out sentence
-    #                 if context_word_pos < 0:
-    #                     break
-    #                 elif idx + window_size >= len(walk):
-    #                     break
-    #                 elif idx == context_word_pos:
-    #                     continue
-    #                 batch_pairs.append((phr, walk[context_word_pos]))
-    #                 if len(batch_pairs) == batch_size:
-    #                     yielded_batch = batch_pairs
-    #                     batch_pairs = []
-    #                     yield yielded_batch
+    def node2vec_batch_yielder(self, window_size, batch_size):
+        batch_pairs = []
+        for walk in tqdm(self.walks):
+            for idx, phr in enumerate(walk):
+                # for each window position
+                for w in range(-window_size, window_size + 1):
+                    context_word_pos = idx + w
+                    # make sure not jump out sentence
+                    if context_word_pos < 0:
+                        break
+                    elif idx + window_size >= len(walk):
+                        break
+                    elif idx == context_word_pos:
+                        continue
+                    batch_pairs.append((phr, walk[context_word_pos]))
+                    if len(batch_pairs) == batch_size:
+                        yielded_batch = batch_pairs
+                        batch_pairs = []
+                        yield yielded_batch
 
     def create_save_dataset(self, window_size):
         with open('dataset.txt', 'w') as dataset:
