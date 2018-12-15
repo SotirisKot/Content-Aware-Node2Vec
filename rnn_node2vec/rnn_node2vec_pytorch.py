@@ -3,10 +3,10 @@ import re
 from torch.autograd import Variable
 import torch.optim as optim
 import time
-from node2vec_utils import Utils
+from rnn_node2vec_utils import Utils
 from rnn_skipgram import node2vec_rnn
 from torch.utils.data import DataLoader
-from dataloader import Node2VecDataset
+from rnn_dataloader import Node2VecDataset
 import numpy as np
 from tqdm import tqdm
 from keras.preprocessing.sequence import pad_sequences
@@ -71,8 +71,6 @@ class Node2Vec:
         self.odir_embeddings = '/home/paperspace/sotiris/'
         self.output_file = output_file
         self.wv = {}
-        self.dataset = Node2VecDataset('dataset.txt')
-        self.dataloader = DataLoader(dataset=self.dataset, batch_size=self.batch_size, shuffle=False, num_workers=6)
 
     def train(self):
         model = node2vec_rnn(self.vocabulary_size, self.embedding_dim, self.rnn_size, self.neg_sample_num,
@@ -83,16 +81,18 @@ class Node2Vec:
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()
-        # optimizer = optim.SGD(params, lr=0.025)
-        optimizer = torch.optim.Adam(params, lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
-        total_batches = self.utils.get_num_batches(self.batch_size)
+
+        optimizer = optim.SparseAdam(params, lr=0.001)
+        dataset = Node2VecDataset(self.utils, self.neg_sample_num)
+        dataloader = DataLoader(dataset=dataset,
+                                batch_size=self.batch_size,
+                                shuffle=False,
+                                drop_last=True)
 
         for epoch in range(self.epochs):
-            model.train()
             batch_num = 0
             batch_costs = []
-            start = time.time()
-            for sample in tqdm(self.dataloader):
+            for sample in tqdm(dataloader):
                 max_phr_len = 0
                 max_pos_len = 0
                 max_neg_len = 0
@@ -114,17 +114,15 @@ class Node2Vec:
                 batch_neg_inds = np.stack(pad_sequences(sequences=[b for b in neg_v], maxlen=max_neg_len))
 
                 optimizer.zero_grad()
-                loss = model(batch_phr_inds, batch_pos_inds, batch_neg_inds, batch_phr_inds.shape[0])
+                loss = model(batch_phr_inds, batch_pos_inds, batch_neg_inds)
                 loss.backward()
                 optimizer.step()
                 batch_costs.append(loss.cpu().item())
-                del batch_phr_inds, batch_pos_inds, batch_neg_inds
-                if batch_num % 500 == 0:
-                    print('Batches Average Loss: {}, Batches: {}/{} '.format(
+
+                if batch_num % 5000 == 0:
+                    print('Batches Average Loss: {}, Batches: {} '.format(
                         sum(batch_costs) / float(len(batch_costs)),
-                        batch_num, total_batches))
-                    print('It took', time.time() - start, 'seconds.')
-                    start = time.time()
+                        batch_num))
                     batch_costs = []
                 batch_num += 1
             print()
@@ -135,5 +133,5 @@ class Node2Vec:
             self.utils.stop = True
         print("Optimization Finished!")
         self.wv = model.save_embeddings(file_name=self.odir_embeddings + self.output_file,
-                                             idx2word=self.utils.idx2word,
-                                             use_cuda=True)
+                                        idx2word=self.utils.idx2word,
+                                        use_cuda=True)

@@ -26,11 +26,8 @@ class Utils(object):
         self.vocabulary_size = len(self.word2idx)
         print("Total words: ", self.vocabulary_size)
         self.train_data = data
-        self.current_walk = self.get_walk()
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
-        # Create dataset for data loading
-        self.node2vec_yielder(self.window_size)
 
     def build_word_vocab(self, walks):
         data_vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence

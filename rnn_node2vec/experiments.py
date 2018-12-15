@@ -8,7 +8,7 @@ import os
 import pickle
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve, auc, roc_auc_score
-from node2vec_pytorch import Node2Vec
+from rnn_node2vec_pytorch import Node2Vec
 
 
 def parse_args():
@@ -24,7 +24,7 @@ def parse_args():
     parser.add_argument('--dimensions', type=int, default=30,
                         help='Number of dimensions. Default is 128.')
 
-    parser.add_argument('--walk-length', type=int, default=80,
+    parser.add_argument('--walk-length', type=int, default=40,
                         help='Length of walk per source. Default is 80.')
 
     parser.add_argument('--num-walks', type=int, default=10,

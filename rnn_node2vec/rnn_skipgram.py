@@ -1,6 +1,5 @@
 import torch
 from torch.autograd import Variable
-import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
@@ -9,14 +8,13 @@ from tqdm import tqdm
 my_seed = 1997
 torch.manual_seed(my_seed)
 torch.cuda.manual_seed(my_seed)
-cudnn.benchmark = True
 
 
 class node2vec_rnn(nn.Module):
     def __init__(self, vocab_size, embedding_dim, rnn_size, neg_sample_num, batch_size, window_size, scale=1e-4, max_norm=1):
         super(node2vec_rnn, self).__init__()
-        self.u_embeddings = nn.Embedding(vocab_size, embedding_dim)
-        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim)
+        self.u_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
+        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
         self.embedding_dim = embedding_dim
         self.neg_sample_num = neg_sample_num
         self.batch_size = batch_size
@@ -68,7 +66,7 @@ class node2vec_rnn(nn.Module):
         neg = neg.permute(1, 0, 2)
         return phr, pos, neg
 
-    def get_loss(self, phr_emb, context_emb, neg_emb, batch_size):
+    def get_loss(self, phr_emb, context_emb, neg_emb):
         score = torch.mul(phr_emb, context_emb)
         score = torch.sum(score, dim=1)
         log_target = F.logsigmoid(score)
@@ -76,13 +74,13 @@ class node2vec_rnn(nn.Module):
         sum_log_sampled = F.logsigmoid(-1 * neg_score)
         sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
         loss = log_target + sum_log_sampled
-        return -1 * loss.sum() / float(batch_size)
+        return -1 * torch.mean(loss)
 
-    def forward(self, phr_inds, pos_inds, neg_inds, batch_size):
+    def forward(self, phr_inds, pos_inds, neg_inds):
         phr, pos, neg = self.fix_input(phr_inds, pos_inds, neg_inds)
         phr, pos, neg = self.get_words_embeds(phr, pos, neg)
         phr, pos, neg = self.get_rnn_representation(phr, pos, neg)
-        loss = self.get_loss(phr, pos, neg, batch_size)
+        loss = self.get_loss(phr, pos, neg)
         return loss
 
     def save_embeddings(self, file_name, idx2word, use_cuda=False):
