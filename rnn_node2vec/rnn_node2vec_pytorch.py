@@ -98,7 +98,7 @@ class Node2Vec:
                 max_neg_len = 0
                 center = sample['center']
                 context = sample['context']
-                neg_v = np.random.choice(self.utils.sample_table, size=(center.shape[0] * self.neg_sample_num)).tolist()
+                neg_v = np.random.choice(self.utils.sample_table, size=(len(center) * self.neg_sample_num)).tolist()
 
                 phr = [phr2idx(self.utils.phrase_dic[int(phr)], self.word2idx) for phr in center]
                 max_phr_len = max([max_phr_len] + [len(pos_u) for pos_u in phr])
