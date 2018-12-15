@@ -32,6 +32,7 @@ class node2vec_rnn(nn.Module):
     def init_emb(self):
         initrange = 0.5 / self.embedding_dim
         self.u_embeddings.weight.data.uniform_(-initrange, initrange)
+        self.u_embeddings.weight.data[0] = 0
         self.v_embeddings.weight.data.uniform_(-0, 0)
 
     def init_weights(self, scale=1e-4):
