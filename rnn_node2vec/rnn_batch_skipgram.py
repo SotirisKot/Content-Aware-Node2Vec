@@ -4,6 +4,7 @@ import torch
 from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import numpy as np
 import pdb
 from tqdm import tqdm
@@ -15,8 +16,8 @@ torch.cuda.manual_seed(my_seed)
 class node2vec_rnn(nn.Module):
     def __init__(self, vocab_size, embedding_dim, rnn_size, neg_sample_num, batch_size, window_size, scale=1e-4, max_norm=1):
         super(node2vec_rnn, self).__init__()
-        self.u_embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
-        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
+        self.u_embeddings = nn.Embedding(vocab_size, embedding_dim)
+        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim)
         self.embedding_dim = embedding_dim
         self.neg_sample_num = neg_sample_num
         self.batch_size = batch_size
@@ -34,7 +35,6 @@ class node2vec_rnn(nn.Module):
     def init_emb(self):
         initrange = 0.5 / self.embedding_dim
         self.u_embeddings.weight.data.uniform_(-initrange, initrange)
-        self.u_embeddings.weight.data[0] = 0
         self.v_embeddings.weight.data.uniform_(-0, 0)
 
     def init_weights(self, scale=1e-4):
@@ -42,10 +42,23 @@ class node2vec_rnn(nn.Module):
             nn.init.uniform_(param, a=-scale, b=scale)
 
     def fix_input(self, phr_inds, pos_inds, neg_inds):
-        phr = [Variable(torch.LongTensor(phr_ind), requires_grad=False).cuda() for phr_ind in phr_inds]
-        pos = [Variable(torch.LongTensor(pos_ind), requires_grad=False).cuda() for pos_ind in pos_inds]
-        neg = [Variable(torch.LongTensor(neg_ind), requires_grad=False).cuda() for neg_ind in neg_inds]
-        return phr, pos, neg
+
+        seq_lengths_phr = torch.LongTensor([len(seq) for seq in phr_inds])
+        seq_phr = self.pad_sequences(phr_inds, seq_lengths_phr)
+
+        seq_lengths_pos = torch.LongTensor([len(seq) for seq in pos_inds])
+        seq_pos = self.pad_sequences(pos_inds, seq_lengths_pos)
+
+        seq_lengths_neg = torch.LongTensor([len(seq) for seq in neg_inds])
+        seq_neg = self.pad_sequences(neg_inds, seq_lengths_neg)
+
+        return seq_phr, seq_pos, seq_neg
+
+    def pad_sequences(self, vectorized_seqs, seq_lengths):
+        seq_tensor = torch.zeros((len(vectorized_seqs), seq_lengths.max())).long()
+        for idx, (seq, seqlen) in enumerate(zip(vectorized_seqs, seq_lengths)):
+            seq_tensor[idx, :seqlen] = torch.LongTensor(seq)
+        return seq_tensor
 
     def get_words_embeds(self, phr, pos, neg):
         phr = [self.u_embeddings(p) for p in phr]
@@ -69,7 +82,7 @@ class node2vec_rnn(nn.Module):
         second_neg_batch = neg[self.batch_size:]
         neg = torch.cat([self.rnn_representation_one(n) for n in [first_neg_batch, second_neg_batch]], dim=0)
         neg = neg.view(phr.size(0), -1, self.rnn_size)
-        
+
         return phr, pos, neg
 
     def get_loss(self, phr_emb, context_emb, neg_emb):
