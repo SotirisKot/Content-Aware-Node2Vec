@@ -66,7 +66,7 @@ class node2vec_rnn(nn.Module):
         phr = torch.stack(phr)
         pos = [self.v_embeddings(p) for p in pos]
         pos = torch.stack(pos)
-        neg = [self.u_embeddings(n) for n in neg]
+        neg = [self.v_embeddings(n) for n in neg]
         neg = torch.stack(neg)
         return phr, pos, neg
 
