@@ -1,3 +1,5 @@
+from pprint import pprint
+
 import torch
 from torch.autograd import Variable
 import torch.nn as nn
@@ -13,8 +15,8 @@ torch.cuda.manual_seed(my_seed)
 class node2vec_rnn(nn.Module):
     def __init__(self, vocab_size, embedding_dim, rnn_size, neg_sample_num, batch_size, window_size, scale=1e-4, max_norm=1):
         super(node2vec_rnn, self).__init__()
-        self.u_embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
-        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
+        self.u_embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=0, sparse=True)
+        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=0, sparse=True)
         self.embedding_dim = embedding_dim
         self.neg_sample_num = neg_sample_num
         self.batch_size = batch_size
@@ -40,9 +42,9 @@ class node2vec_rnn(nn.Module):
             nn.init.uniform_(param, a=-scale, b=scale)
 
     def fix_input(self, phr_inds, pos_inds, neg_inds):
-        phr = [Variable(torch.LongTensor(phr_ind), requires_grad=False).cuda() for phr_ind in phr_inds]
-        pos = [Variable(torch.LongTensor(pos_ind), requires_grad=False).cuda() for pos_ind in pos_inds]
-        neg = [Variable(torch.LongTensor(neg_ind), requires_grad=False).cuda() for neg_ind in neg_inds]
+        phr = [Variable(torch.LongTensor(phr_ind), requires_grad=False) for phr_ind in phr_inds]
+        pos = [Variable(torch.LongTensor(pos_ind), requires_grad=False) for pos_ind in pos_inds]
+        neg = [Variable(torch.LongTensor(neg_ind), requires_grad=False) for neg_ind in neg_inds]
         return phr, pos, neg
 
     def get_words_embeds(self, phr, pos, neg):
@@ -56,12 +58,13 @@ class node2vec_rnn(nn.Module):
 
     def rnn_representation_one(self, inp):
         inp, hn = self.the_rnn(inp, self.h0)
-        inp = inp[:, -1, :]
-        return inp
+        last_timestep = hn[-1]
+        return last_timestep
 
     def get_rnn_representation(self, phr, pos, neg):
         phr = self.rnn_representation_one(phr)
         pos = self.rnn_representation_one(pos)
+
         neg = neg.view(phr.size(0), self.neg_sample_num, -1, self.embedding_dim).permute(1, 0, 2, 3)
         neg = torch.stack([self.rnn_representation_one(n) for n in neg], dim=0)
         neg = neg.permute(1, 0, 2)

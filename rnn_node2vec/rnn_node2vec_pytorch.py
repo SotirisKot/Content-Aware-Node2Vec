@@ -36,12 +36,18 @@ def phr2idx(phr, word_vocab):
     return p
 
 
-def print_params(model):
+def print_params(model, vocabulary_size):
     print(40 * '=')
     print(model)
     print(40 * '=')
     total_params = 0
+    params_sparse = []
+    params_dense = []
     for parameter in model.parameters():
+        if parameter.size(0) == vocabulary_size:
+            params_sparse.append(parameter)
+        else:
+            params_dense.append(parameter)
         # print(parameter.size())
         v = 1
         for s in parameter.size():
@@ -50,6 +56,7 @@ def print_params(model):
     print(40 * '=')
     print(total_params)
     print(40 * '=')
+    return params_sparse, params_dense
 
 
 class Node2Vec:
@@ -76,13 +83,14 @@ class Node2Vec:
         model = node2vec_rnn(self.vocabulary_size, self.embedding_dim, self.rnn_size, self.neg_sample_num,
                              self.batch_size,
                              self.window_size)
-        print_params(model)
+        params_sparse, params_dense = print_params(model, self.vocabulary_size)
         params = model.parameters()
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()
 
-        optimizer = optim.Adam(params, lr=0.001)
+        optimizer1 = optim.Adam(params_dense, lr=0.001)
+        optimizer2 = optim.SparseAdam(params_sparse, lr=0.001)
         dataset = Node2VecDataset(self.utils, self.neg_sample_num)
         dataloader = DataLoader(dataset=dataset,
                                 batch_size=self.batch_size,
@@ -113,10 +121,12 @@ class Node2Vec:
                 batch_pos_inds = np.stack(pad_sequences(sequences=[b for b in pos_context], maxlen=max_pos_len))
                 batch_neg_inds = np.stack(pad_sequences(sequences=[b for b in neg_v], maxlen=max_neg_len))
 
-                optimizer.zero_grad()
+                optimizer1.zero_grad()
+                optimizer2.zero_grad()
                 loss = model(batch_phr_inds, batch_pos_inds, batch_neg_inds)
                 loss.backward()
-                optimizer.step()
+                optimizer1.step()
+                optimizer2.step()
                 batch_costs.append(loss.cpu().item())
 
                 if batch_num % 5000 == 0:
@@ -126,7 +136,7 @@ class Node2Vec:
                     batch_costs = []
                 batch_num += 1
             print()
-            state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
+            state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer1': optimizer1.state_dict(), 'optimizer2': optimizer2.state_dict()}
             save_checkpoint(state,
                             filename=self.odir_checkpoint + 'part_of_rnn_checkpoint_epoch_{}.pth.tar'.format(
                                 epoch + 1))
