@@ -125,7 +125,7 @@ class Node2Vec:
                     batch_costs = []
                 batch_num += 1
             print()
-            state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer1': optimizer1.state_dict(), 'optimizer2': optimizer2.state_dict()}
+            state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             save_checkpoint(state,
                             filename=self.odir_checkpoint + 'part_of_rnn_checkpoint_epoch_{}.pth.tar'.format(
                                 epoch + 1))
