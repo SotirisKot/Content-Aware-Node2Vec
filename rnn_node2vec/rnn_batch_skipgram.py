@@ -16,8 +16,8 @@ torch.cuda.manual_seed(my_seed)
 class node2vec_rnn(nn.Module):
     def __init__(self, vocab_size, embedding_dim, rnn_size, neg_sample_num, batch_size, window_size, scale=1e-4, max_norm=1):
         super(node2vec_rnn, self).__init__()
-        self.u_embeddings = nn.Embedding(vocab_size, embedding_dim)
-        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim)
+        self.u_embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
+        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim, padding_idx=0)
         self.embedding_dim = embedding_dim
         self.neg_sample_num = neg_sample_num
         self.batch_size = batch_size
@@ -35,6 +35,7 @@ class node2vec_rnn(nn.Module):
     def init_emb(self):
         initrange = 0.5 / self.embedding_dim
         self.u_embeddings.weight.data.uniform_(-initrange, initrange)
+        self.u_embeddings.weight.data[0] = 0
         self.v_embeddings.weight.data.uniform_(-0, 0)
 
     def init_weights(self, scale=1e-4):

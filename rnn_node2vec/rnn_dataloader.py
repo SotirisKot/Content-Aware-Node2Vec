@@ -2,27 +2,31 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 from torch.autograd import Variable
+import pandas as pd
 
 
 class Node2VecDataset(Dataset):
     """Characterizes a dataset for PyTorch"""
     def __init__(self, utils, neg_samples):
         self.utils = utils
-        self.neg_samples = neg_samples
-        self.span = 2 * self.utils.window_size
-        self.data_gen = self._data_generator()
+        # self.neg_samples = neg_samples
+        # self.span = 2 * self.utils.window_size
+        # self.data_gen = self._data_generator()
         print('Loading data')
-        self.data = self.utils.walks
+        # self.data = self.utils.walks
+        self.data = pd.read_csv('dataset.txt', sep=' ', header=None)
         print('Done loading data')
 
     def __len__(self):
         """Denotes the total number of samples"""
-        length = len(self.data) * ((self.utils.walk_length - self.span) * self.span)
-        return length
+        # length = len(self.data) * ((self.utils.walk_length - self.span) * self.span)
+        return len(self.data)
 
     def __getitem__(self, index):
-        phr, context = next(self.data_gen)
-        sample = {'center': phr, 'context': context}
+        example = self.data.iloc[index]
+        # phr, context = next(self.data_gen)
+        # sample = {'center': phr, 'context': context}
+        sample = {'center': example[0], 'context': example[1]}
         return sample
 
     def _data_generator(self):
