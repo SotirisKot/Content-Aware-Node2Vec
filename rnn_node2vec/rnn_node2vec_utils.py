@@ -33,7 +33,7 @@ class Utils(object):
     def build_word_vocab(self, walks):
         data_vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence
         word2idx = {}
-        word2idx['PAD'] = 0
+        # word2idx['PAD'] = 0
         word2idx['UNKN'] = len(word2idx)
         for walk in tqdm(walks):
             for nodeid in walk:
@@ -123,34 +123,32 @@ class Utils(object):
         neg_v = np.random.choice(self.sample_table, size=(batch_len * neg_samples)).tolist()
         return pos_u, pos_v, neg_v, batch_len
 
-    def node2vec_yielder(self, window_size):
-        with open('dataset.txt', 'w') as dataset:
-            for walk in tqdm(self.walks):
-                for idx, phr in enumerate(walk):
-                    # for each window position
-                    pos_context = []
-                    for w in range(-window_size, window_size + 1):
-                        context_word_pos = idx + w
-                        # make sure not jump out sentence
-                        if context_word_pos < 0:
-                            break
-                        elif idx + window_size >= len(walk):
-                            break
-                        elif idx == context_word_pos:
-                            continue
-                        context_word_idx = walk[context_word_pos]
-                        pos_context.append(context_word_idx)
-                    if len(pos_context) != 0:
-                        # neg_v = np.random.choice(self.sample_table, size=neg_samples).tolist()
-                        for pos in pos_context:
-                            dataset.write(phr + ' ' + pos + '\n')
+    # def node2vec_yielder(self, window_size):
+    #     with open('dataset.txt', 'w') as dataset:
+    #         for walk in tqdm(self.walks):
+    #             for idx, phr in enumerate(walk):
+    #                 # for each window position
+    #                 pos_context = []
+    #                 for w in range(-window_size, window_size + 1):
+    #                     context_word_pos = idx + w
+    #                     # make sure not jump out sentence
+    #                     if context_word_pos < 0:
+    #                         break
+    #                     elif idx + window_size >= len(walk):
+    #                         break
+    #                     elif idx == context_word_pos:
+    #                         continue
+    #                     context_word_idx = walk[context_word_pos]
+    #                     pos_context.append(context_word_idx)
+    #                 if len(pos_context) != 0:
+    #                     # neg_v = np.random.choice(self.sample_table, size=neg_samples).tolist()
+    #                     for pos in pos_context:
+    #                         dataset.write(phr + ' ' + pos + '\n')
 
-    def node2vec_batch_yielder(self, window_size, neg_samples, batch_size):
-        batch, max_phr_len, max_pos_len, max_neg_len = [], 0, 0, 0
+    def node2vec_yielder(self, window_size, neg_samples):
         for walk in tqdm(self.walks):
             for idx, phr in enumerate(walk):
                 # for each window position
-                pos_context = []
                 for w in range(-window_size, window_size + 1):
                     context_word_pos = idx + w
                     # make sure not jump out sentence
@@ -161,23 +159,9 @@ class Utils(object):
                     elif idx == context_word_pos:
                         continue
                     context_word_idx = walk[context_word_pos]
-                    pos_context.append(context_word_idx)
-                if len(pos_context) != 0:
                     neg_v = np.random.choice(self.sample_table, size=neg_samples).tolist()
-                    phr = phr2idx(self.phrase_dic[int(phr)], self.word2idx)
-                    pos_context = [phr2idx(self.phrase_dic[int(item)], self.word2idx) for item in pos_context]
-                    neg_v = [phr2idx(self.phrase_dic[int(item)], self.word2idx) for item in neg_v]
-                    max_phr_len = max([max_phr_len, len(phr)])
-                    max_pos_len = max([max_pos_len] + [len(pos_ind) for pos_ind in pos_context])
-                    max_neg_len = max([max_neg_len] + [len(neg_ind) for neg_ind in neg_v])
+                    yield phr, context_word_idx, neg_v
 
-                    batch.append((phr, pos_context, neg_v))
-                    if len(batch) % batch_size == 0:
-                        batch_phr_inds = pad_sequences(sequences=[b[0] for b in batch], maxlen=max_phr_len)
-                        batch_pos_inds = np.stack([pad_sequences(sequences=b[1], maxlen=max_pos_len) for b in batch])
-                        batch_neg_inds = np.stack([pad_sequences(sequences=b[2], maxlen=max_neg_len) for b in batch])
-                        batch = []
-                        yield batch_phr_inds, batch_pos_inds, batch_neg_inds
 
     def get_num_batches(self, batch_size):
         num_batches = len(self.walks) * 80 / batch_size
