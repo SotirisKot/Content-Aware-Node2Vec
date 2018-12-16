@@ -108,11 +108,10 @@ class Node2Vec:
                     batch_costs = []
                     batch_num += 1
                     batch_aver_costs.append(batch_aver_cost)
-
-                if batch_num % 5000 == 0:
-                    print('Batches Average Loss: {}, Batches: {} '.format(
-                        sum(batch_aver_costs) / float(len(batch_aver_costs)),
-                        batch_num))
+                    if batch_num % 5000 == 0:
+                        print('Batches Average Loss: {}, Batches: {} '.format(
+                            sum(batch_aver_costs) / float(len(batch_aver_costs)),
+                            batch_num))
 
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
