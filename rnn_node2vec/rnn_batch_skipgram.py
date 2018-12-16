@@ -1,5 +1,4 @@
 from pprint import pprint
-
 import torch
 from torch.autograd import Variable
 import torch.nn as nn
@@ -44,16 +43,20 @@ class node2vec_rnn(nn.Module):
 
     def fix_input(self, phr_inds, pos_inds, neg_inds):
 
-        seq_lengths_phr = torch.LongTensor([len(seq) for seq in phr_inds]).cuda()
-        seq_phr = self.pad_sequences(phr_inds, seq_lengths_phr)
+        # seq_lengths_phr = torch.LongTensor([len(seq) for seq in phr_inds]).cuda()
+        # seq_phr = self.pad_sequences(phr_inds, seq_lengths_phr)
+        #
+        # seq_lengths_pos = torch.LongTensor([len(seq) for seq in pos_inds]).cuda()
+        # seq_pos = self.pad_sequences(pos_inds, seq_lengths_pos)
+        #
+        # seq_lengths_neg = torch.LongTensor([len(seq) for seq in neg_inds]).cuda()
+        # seq_neg = self.pad_sequences(neg_inds, seq_lengths_neg)
+        # return seq_phr, seq_pos, seq_neg
 
-        seq_lengths_pos = torch.LongTensor([len(seq) for seq in pos_inds]).cuda()
-        seq_pos = self.pad_sequences(pos_inds, seq_lengths_pos)
-
-        seq_lengths_neg = torch.LongTensor([len(seq) for seq in neg_inds]).cuda()
-        seq_neg = self.pad_sequences(neg_inds, seq_lengths_neg)
-
-        return seq_phr, seq_pos, seq_neg
+        phr = [Variable(torch.LongTensor(phr_ind), requires_grad=False).cuda() for phr_ind in phr_inds]
+        pos = [Variable(torch.LongTensor(pos_ind), requires_grad=False).cuda() for pos_ind in pos_inds]
+        neg = [Variable(torch.LongTensor(neg_ind), requires_grad=False).cuda() for neg_ind in neg_inds]
+        return phr, pos, neg
 
     def pad_sequences(self, vectorized_seqs, seq_lengths):
         seq_tensor = torch.zeros((len(vectorized_seqs), seq_lengths.max())).long().cuda()
@@ -66,7 +69,7 @@ class node2vec_rnn(nn.Module):
         phr = torch.stack(phr)
         pos = [self.v_embeddings(p) for p in pos]
         pos = torch.stack(pos)
-        neg = [self.u_embeddings(n) for n in neg]
+        neg = [self.v_embeddings(n) for n in neg]
         neg = torch.stack(neg)
         return phr, pos, neg
 
@@ -82,7 +85,7 @@ class node2vec_rnn(nn.Module):
         first_neg_batch = neg[:self.batch_size]
         second_neg_batch = neg[self.batch_size:]
         neg = torch.cat([self.rnn_representation_one(n) for n in [first_neg_batch, second_neg_batch]], dim=0)
-        neg = neg.view(phr.size(0), -1, self.rnn_size)
+        neg = neg.view(phr.size(0), self.neg_sample_num, self.rnn_size)
 
         return phr, pos, neg
 

@@ -29,7 +29,6 @@ class Utils(object):
         self.train_data = data
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
-        # self.node2vec_yielder(self.window_size)
 
     def build_word_vocab(self, walks):
         data_vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence
