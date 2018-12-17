@@ -95,28 +95,28 @@ class Node2Vec:
             batch_num = 0
             batch_costs = []
             for sample in tqdm(dataloader):
-                max_phr_len = 0
-                max_pos_len = 0
-                max_neg_len = 0
+                # max_phr_len = 0
+                # max_pos_len = 0
+                # max_neg_len = 0
                 center = sample['center']
                 context = sample['context']
                 neg_v = np.random.choice(self.utils.sample_table, size=(len(center) * self.neg_sample_num)).tolist()
 
                 phr = [phr2idx(self.utils.phrase_dic[int(phr)], self.word2idx) for phr in center]
-                max_phr_len = max([max_phr_len] + [len(pos_u) for pos_u in phr])
+                # max_phr_len = max([max_phr_len] + [len(pos_u) for pos_u in phr])
 
                 pos_context = [phr2idx(self.utils.phrase_dic[int(item)], self.word2idx) for item in context]
-                max_pos_len = max([max_pos_len] + [len(pos_ind) for pos_ind in pos_context])
+                # max_pos_len = max([max_pos_len] + [len(pos_ind) for pos_ind in pos_context])
 
                 neg_v = [phr2idx(self.utils.phrase_dic[int(item)], self.word2idx) for item in neg_v]
-                max_neg_len = max([max_neg_len] + [len(neg_ind) for neg_ind in neg_v])
+                # max_neg_len = max([max_neg_len] + [len(neg_ind) for neg_ind in neg_v])
 
-                batch_phr_inds = np.stack(pad_sequences(sequences=[b for b in phr], maxlen=max_phr_len))
-                batch_pos_inds = np.stack(pad_sequences(sequences=[b for b in pos_context], maxlen=max_pos_len))
-                batch_neg_inds = np.stack(pad_sequences(sequences=[b for b in neg_v], maxlen=max_neg_len))
+                # batch_phr_inds = np.stack(pad_sequences(sequences=[b for b in phr], maxlen=max_phr_len))
+                # batch_pos_inds = np.stack(pad_sequences(sequences=[b for b in pos_context], maxlen=max_pos_len))
+                # batch_neg_inds = np.stack(pad_sequences(sequences=[b for b in neg_v], maxlen=max_neg_len))
 
                 optimizer.zero_grad()
-                loss = model(batch_phr_inds, batch_pos_inds, batch_neg_inds)
+                loss = model(phr, pos_context, neg_v)
                 loss.backward()
                 optimizer.step()
                 batch_costs.append(loss.cpu().item())
