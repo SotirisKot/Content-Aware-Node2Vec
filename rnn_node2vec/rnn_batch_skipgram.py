@@ -43,19 +43,19 @@ class node2vec_rnn(nn.Module):
 
     def fix_input(self, phr_inds, pos_inds, neg_inds):
 
-        seq_lengths_phr = torch.LongTensor([len(seq) for seq in phr_inds])
+        seq_lengths_phr = torch.LongTensor([len(seq) for seq in phr_inds]).cuda()
         seq_phr = self.pad_sequences(phr_inds, seq_lengths_phr)
 
-        seq_lengths_pos = torch.LongTensor([len(seq) for seq in pos_inds])
+        seq_lengths_pos = torch.LongTensor([len(seq) for seq in pos_inds]).cuda()
         seq_pos = self.pad_sequences(pos_inds, seq_lengths_pos)
 
-        seq_lengths_neg = torch.LongTensor([len(seq) for seq in neg_inds])
+        seq_lengths_neg = torch.LongTensor([len(seq) for seq in neg_inds]).cuda()
         seq_neg = self.pad_sequences(neg_inds, seq_lengths_neg)
 
         return seq_phr, seq_pos, seq_neg
 
     def pad_sequences(self, vectorized_seqs, seq_lengths):
-        seq_tensor = torch.zeros((len(vectorized_seqs), seq_lengths.max())).long()
+        seq_tensor = torch.zeros((len(vectorized_seqs), seq_lengths.max())).long().cuda()
         for idx, (seq, seqlen) in enumerate(zip(vectorized_seqs, seq_lengths)):
             seq_tensor[idx, :seqlen] = torch.LongTensor(seq)
         return seq_tensor
