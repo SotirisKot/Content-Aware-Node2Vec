@@ -1,3 +1,5 @@
+from pprint import pprint
+
 import torch
 import re
 from torch.autograd import Variable
@@ -42,6 +44,7 @@ def print_params(model):
     print(40 * '=')
     total_params = 0
     for parameter in model.parameters():
+        print(parameter.size())
         v = 1
         for s in parameter.size():
             v *= s

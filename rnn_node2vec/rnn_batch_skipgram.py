@@ -43,59 +43,49 @@ class node2vec_rnn(nn.Module):
 
     def fix_input(self, phr_inds, pos_inds, neg_inds):
 
-        # seq_lengths_phr = torch.LongTensor([len(seq) for seq in phr_inds]).cuda()
-        # seq_phr = self.pad_sequences(phr_inds, seq_lengths_phr)
-        #
-        # seq_lengths_pos = torch.LongTensor([len(seq) for seq in pos_inds]).cuda()
-        # seq_pos = self.pad_sequences(pos_inds, seq_lengths_pos)
-        #
-        # seq_lengths_neg = torch.LongTensor([len(seq) for seq in neg_inds]).cuda()
-        # seq_neg = self.pad_sequences(neg_inds, seq_lengths_neg)
-        # return seq_phr, seq_pos, seq_neg
+        seq_lengths_phr = torch.LongTensor([len(seq) for seq in phr_inds])
+        seq_phr = self.pad_sequences(phr_inds, seq_lengths_phr)
 
-        phr = [Variable(torch.LongTensor(phr_ind), requires_grad=False).cuda() for phr_ind in phr_inds]
-        pos = [Variable(torch.LongTensor(pos_ind), requires_grad=False).cuda() for pos_ind in pos_inds]
-        neg = [Variable(torch.LongTensor(neg_ind), requires_grad=False).cuda() for neg_ind in neg_inds]
-        return phr, pos, neg
+        seq_lengths_pos = torch.LongTensor([len(seq) for seq in pos_inds])
+        seq_pos = self.pad_sequences(pos_inds, seq_lengths_pos)
+
+        seq_lengths_neg = torch.LongTensor([len(seq) for seq in neg_inds])
+        seq_neg = self.pad_sequences(neg_inds, seq_lengths_neg)
+
+        return seq_phr, seq_pos, seq_neg
 
     def pad_sequences(self, vectorized_seqs, seq_lengths):
-        seq_tensor = torch.zeros((len(vectorized_seqs), seq_lengths.max())).long().cuda()
+        seq_tensor = torch.zeros((len(vectorized_seqs), seq_lengths.max())).long()
         for idx, (seq, seqlen) in enumerate(zip(vectorized_seqs, seq_lengths)):
             seq_tensor[idx, :seqlen] = torch.LongTensor(seq)
         return seq_tensor
 
     def get_words_embeds(self, phr, pos, neg):
-        phr = [self.u_embeddings(p) for p in phr]
-        phr = torch.stack(phr)
-        pos = [self.v_embeddings(p) for p in pos]
-        pos = torch.stack(pos)
-        neg = [self.v_embeddings(n) for n in neg]
-        neg = torch.stack(neg)
+        phr = self.u_embeddings(phr)
+        pos = self.v_embeddings(pos)
+        neg = self.v_embeddings(neg)
         return phr, pos, neg
 
     def rnn_representation_one(self, inp):
         inp, hn = self.the_rnn(inp, self.h0)
-        last_timestep = hn[-1]
+        last_timestep = hn[-1, :, :]
         return last_timestep
 
     def get_rnn_representation(self, phr, pos, neg):
         phr = self.rnn_representation_one(phr)
         pos = self.rnn_representation_one(pos)
-
-        first_neg_batch = neg[:self.batch_size]
-        second_neg_batch = neg[self.batch_size:]
-        neg = torch.cat([self.rnn_representation_one(n) for n in [first_neg_batch, second_neg_batch]], dim=0)
-        neg = neg.view(phr.size(0), self.neg_sample_num, self.rnn_size)
-
+        neg = self.rnn_representation_one(neg)
         return phr, pos, neg
 
     def get_loss(self, phr_emb, context_emb, neg_emb):
         score = torch.mul(phr_emb, context_emb)
         score = torch.sum(score, dim=1)
         log_target = F.logsigmoid(score)
-        neg_score = torch.bmm(neg_emb, phr_emb.unsqueeze(2)).squeeze()
+        # neg_score = torch.bmm(neg_emb, phr_emb.unsqueeze(2)).squeeze()
+        neg_score = torch.mul(phr_emb, neg_emb)
+        neg_score = torch.sum(neg_score, dim=1)
         sum_log_sampled = F.logsigmoid(-1 * neg_score)
-        sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
+        # sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
         loss = log_target + sum_log_sampled
         return -1 * torch.mean(loss)
 
