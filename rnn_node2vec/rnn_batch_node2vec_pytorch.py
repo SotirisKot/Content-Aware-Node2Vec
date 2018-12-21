@@ -70,8 +70,8 @@ class Node2Vec:
         self.neg_sample_num = neg_sample_num
         # self.odir_checkpoint = 'drive/My Drive/rnn_node2vec/checkpoints/'
         # self.odir_embeddings = 'drive/My Drive/rnn_node2vec/embeddings/'
-        self.odir_checkpoint = 'home/paperspace/sotiris/thesis/rnn_node2vec/'
-        self.odir_embeddings = 'home/paperspace/sotiris/thesis/rnn_node2vec/'
+        self.odir_checkpoint = '/home/paperspace/sotiris/thesis/rnn_node2vec/'
+        self.odir_embeddings = '/home/paperspace/sotiris/thesis/rnn_node2vec/'
         self.output_file = output_file
         self.wv = {}
 
