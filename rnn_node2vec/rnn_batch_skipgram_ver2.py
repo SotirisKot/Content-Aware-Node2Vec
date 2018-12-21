@@ -71,7 +71,7 @@ class node2vec_rnn(nn.Module):
 
     def rnn_representation_one(self, inp):
         if self.training:
-            batch_size = inp.shape[0]
+            # batch_size = inp.shape[0]
             # inp, hn = self.the_rnn(inp, self.h0.repeat(1, batch_size, 1))
             inp, hn = self.the_rnn(inp)
             last_timestep = hn[-1]
