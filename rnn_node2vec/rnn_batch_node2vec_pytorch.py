@@ -6,12 +6,13 @@ from torch.autograd import Variable
 import torch.optim as optim
 import time
 from rnn_node2vec_utils import Utils
-from rnn_batch_skipgram import node2vec_rnn
+# from rnn_batch_skipgram import node2vec_rnn
+from rnn_batch_skipgram_ver2 import node2vec_rnn
 from torch.utils.data import DataLoader
 from rnn_dataloader import Node2VecDataset
 import numpy as np
 from tqdm import tqdm
-from keras.preprocessing.sequence import pad_sequences
+# from keras.preprocessing.sequence import pad_sequences
 
 bioclean = lambda t: ' '.join(re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
                                      t.replace('"', '').replace('/', '').replace('\\', '').replace("'",
@@ -67,10 +68,10 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        # self.odir_checkpoint = 'drive/My Drive/pytorch-node2vec-umls-relations/checkpoints/'
-        # self.odir_embeddings = 'drive/My Drive/pytorch-node2vec-umls-relations/embeddings/'
-        self.odir_checkpoint = '/home/paperspace/sotiris/'
-        self.odir_embeddings = '/home/paperspace/sotiris/'
+        # self.odir_checkpoint = 'drive/My Drive/rnn_node2vec/checkpoints/'
+        # self.odir_embeddings = 'drive/My Drive/rnn_node2vec/embeddings/'
+        self.odir_checkpoint = 'home/paperspace/sotiris/thesis/rnn_node2vec/'
+        self.odir_embeddings = 'home/paperspace/sotiris/thesis/rnn_node2vec/'
         self.output_file = output_file
         self.wv = {}
 
@@ -84,43 +85,31 @@ class Node2Vec:
             print('GPU available!!')
             model.cuda()
 
-        optimizer = optim.Adam(params, lr=0.001)
+        optimizer = optim.Adam(params, lr=0.0001)
         dataset = Node2VecDataset(self.utils, self.neg_sample_num)
         dataloader = DataLoader(dataset=dataset,
                                 batch_size=self.batch_size,
-                                shuffle=False,
-                                drop_last=True)
+                                shuffle=False)
 
         for epoch in range(self.epochs):
             batch_num = 0
             batch_costs = []
+            model.train()
             for sample in tqdm(dataloader):
-                # max_phr_len = 0
-                # max_pos_len = 0
-                # max_neg_len = 0
                 center = sample['center']
                 context = sample['context']
                 neg_v = np.random.choice(self.utils.sample_table, size=(len(center) * self.neg_sample_num)).tolist()
-
+                #
                 phr = [phr2idx(self.utils.phrase_dic[int(phr)], self.word2idx) for phr in center]
-                # max_phr_len = max([max_phr_len] + [len(pos_u) for pos_u in phr])
-
                 pos_context = [phr2idx(self.utils.phrase_dic[int(item)], self.word2idx) for item in context]
-                # max_pos_len = max([max_pos_len] + [len(pos_ind) for pos_ind in pos_context])
-
                 neg_v = [phr2idx(self.utils.phrase_dic[int(item)], self.word2idx) for item in neg_v]
-                # max_neg_len = max([max_neg_len] + [len(neg_ind) for neg_ind in neg_v])
-
-                # batch_phr_inds = np.stack(pad_sequences(sequences=[b for b in phr], maxlen=max_phr_len))
-                # batch_pos_inds = np.stack(pad_sequences(sequences=[b for b in pos_context], maxlen=max_pos_len))
-                # batch_neg_inds = np.stack(pad_sequences(sequences=[b for b in neg_v], maxlen=max_neg_len))
-
+                #
                 optimizer.zero_grad()
                 loss = model(phr, pos_context, neg_v)
                 loss.backward()
                 optimizer.step()
                 batch_costs.append(loss.cpu().item())
-
+                #
                 if batch_num % 5000 == 0:
                     print('Batches Average Loss: {}, Batches: {} '.format(
                         sum(batch_costs) / float(len(batch_costs)),
@@ -130,7 +119,7 @@ class Node2Vec:
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             save_checkpoint(state,
-                            filename=self.odir_checkpoint + 'part_of_rnn_checkpoint_epoch_{}.pth.tar'.format(
+                            filename=self.odir_checkpoint + 'part_of_rnn_final_checkpoint_epoch_{}.pth.tar'.format(
                                 epoch + 1))
             self.utils.stop = True
         print("Optimization Finished!")

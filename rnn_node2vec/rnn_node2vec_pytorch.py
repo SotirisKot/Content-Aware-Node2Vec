@@ -71,10 +71,8 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        # self.odir_checkpoint = 'drive/My Drive/pytorch-node2vec-umls-relations/checkpoints/'
-        # self.odir_embeddings = 'drive/My Drive/pytorch-node2vec-umls-relations/embeddings/'
-        self.odir_checkpoint = '/home/paperspace/sotiris/'
-        self.odir_embeddings = '/home/paperspace/sotiris/'
+        self.odir_checkpoint = 'drive/My Drive/pytorch-node2vec-umls-relations/checkpoints/'
+        self.odir_embeddings = 'drive/My Drive/pytorch-node2vec-umls-relations/embeddings/'
         self.output_file = output_file
         self.wv = {}
 

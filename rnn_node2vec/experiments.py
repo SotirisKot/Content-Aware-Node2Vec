@@ -15,10 +15,10 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run node2vec.")
 
     parser.add_argument('--input', nargs='?',
-                        default='/home/paperspace/sotiris/thesis/relation_instances_edgelists/part_of_relations.edgelist',
+                        default='home/paperspace/sotiris/thesis/relation_instances_edgelists/part_of_relations.edgelist',
                         help='Input graph path')
 
-    parser.add_argument('--output', nargs='?', default='part_of_rnn_words_link_predict.emb',
+    parser.add_argument('--output', nargs='?', default='part_of_rnn_final_words_link_predict.emb',
                         help='Embeddings path')
 
     parser.add_argument('--dimensions', type=int, default=30,
@@ -91,7 +91,7 @@ def learn_embeddings(walks):
     print('Creating walk corpus..')
     walks = [list(map(str, walk)) for walk in walks]  # this is for python3
     model = Node2Vec(walks=walks, output_file=args.output, walk_length=args.walk_length, embedding_dim=args.dimensions,
-                     epochs=args.iter, batch_size=128, window_size=args.window_size, neg_sample_num=2)
+                     epochs=args.iter, batch_size=128, window_size=args.window_size, neg_sample_num=1)
     print('Optimization started...')
     model.train()
     embeddings = model.wv
@@ -294,11 +294,11 @@ def main(args):
     G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
     G.preprocess_transition_probs()
     walks = G.simulate_walks(args.num_walks, args.walk_length)
-    # walks = [['1', '23345', '3356', '4446', '5354', '6123', '74657', '8445', '97890', '1022', '1133'],
+    # walks = [['1', '23345', '3356', '4446', '5354', '6124', '74657', '8445', '97890', '1022', '1133'],
     #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
     #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
     #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1'],
-    #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1', '9999']]
+    #          ['6914', '1022', '97890', '8445', '74657', '6123', '5354', '4446', '3356', '23345', '1', '9999', '5000', '2000', '1000']]
     node_embeddings = learn_embeddings(walks)
 
     # for training
