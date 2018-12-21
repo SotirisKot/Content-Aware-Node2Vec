@@ -15,7 +15,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run node2vec.")
 
     parser.add_argument('--input', nargs='?',
-                        default='home/paperspace/sotiris/thesis/relation_instances_edgelists/part_of_relations.edgelist',
+                        default='/home/paperspace/sotiris/thesis/relation_instances_edgelists/part_of_relations.edgelist',
                         help='Input graph path')
 
     parser.add_argument('--output', nargs='?', default='part_of_rnn_final_words_link_predict.emb',
