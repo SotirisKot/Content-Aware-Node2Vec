@@ -72,8 +72,8 @@ class Node2Vec:
         self.utils = Utils(walks, window_size, walk_length)
         self.vocabulary_size = self.utils.vocabulary_size
         self.node2phr = self.utils.phrase_dic
-        # self.word2idx = self.utils.word2idx
-        self.word2idx = self.create_word2idx()
+        self.word2idx = self.utils.word2idx
+        # self.word2idx = self.create_word2idx()
         self.embedding_dim = embedding_dim
         self.rnn_size = rnn_size
         self.window_size = window_size
@@ -133,7 +133,7 @@ class Node2Vec:
                      'state_dict': model.state_dict(),
                      'optimizer': optimizer.state_dict(),
                      'word2idx': self.word2idx,
-                     'idx2word': self.idx2word}
+                     'idx2word': self.utils.idx2word}
             save_checkpoint(state,
                             filename=self.odir_checkpoint + 'part_of_rnn_final_checkpoint_epoch_{}.pth.tar'.format(
                                 epoch + 1))
