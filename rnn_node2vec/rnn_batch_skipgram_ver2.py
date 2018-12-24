@@ -25,7 +25,7 @@ class node2vec_rnn(nn.Module):
         print(self.rnn_size)
         self.scale = scale
         self.max_norm = max_norm
-        # self.h0 = nn.Parameter(torch.randn(1, 1, self.rnn_size).uniform_(-self.scale, self.scale))
+        self.h0 = nn.Parameter(torch.randn(1, 1, self.rnn_size).uniform_(-self.scale, self.scale))
         self.the_rnn = nn.GRU(input_size=self.embedding_dim, hidden_size=self.rnn_size, num_layers=1, bidirectional=False,
                               bias=True, dropout=0, batch_first=True)
         self.init_weights(self.scale)
@@ -43,13 +43,13 @@ class node2vec_rnn(nn.Module):
 
     def fix_input(self, phr_inds=None, pos_inds=None, neg_inds=None):
         if self.training:
-            seq_lengths_phr = torch.LongTensor([len(seq) for seq in phr_inds]).cuda()
+            seq_lengths_phr = torch.LongTensor([len(seq) for seq in phr_inds])
             seq_phr = self.pad_sequences(phr_inds, seq_lengths_phr)
 
-            seq_lengths_pos = torch.LongTensor([len(seq) for seq in pos_inds]).cuda()
+            seq_lengths_pos = torch.LongTensor([len(seq) for seq in pos_inds])
             seq_pos = self.pad_sequences(pos_inds, seq_lengths_pos)
 
-            seq_lengths_neg = torch.LongTensor([len(seq) for seq in neg_inds]).cuda()
+            seq_lengths_neg = torch.LongTensor([len(seq) for seq in neg_inds])
             seq_neg = self.pad_sequences(neg_inds, seq_lengths_neg)
 
             return seq_phr, seq_pos, seq_neg
@@ -58,7 +58,7 @@ class node2vec_rnn(nn.Module):
             return phr
 
     def pad_sequences(self, vectorized_seqs, seq_lengths):
-        seq_tensor = torch.zeros((len(vectorized_seqs), seq_lengths.max())).long().cuda()
+        seq_tensor = torch.zeros((len(vectorized_seqs), seq_lengths.max())).long()
         for idx, (seq, seqlen) in enumerate(zip(vectorized_seqs, seq_lengths)):
             seq_tensor[idx, -seqlen:] = torch.LongTensor(seq)
         return seq_tensor
@@ -71,14 +71,14 @@ class node2vec_rnn(nn.Module):
 
     def rnn_representation_one(self, inp):
         if self.training:
-            # batch_size = inp.shape[0]
-            # inp, hn = self.the_rnn(inp, self.h0.repeat(1, batch_size, 1))
-            inp, hn = self.the_rnn(inp)
-            last_timestep = hn[-1]
+            batch_size = inp.shape[0]
+            inp, hn = self.the_rnn(inp, self.h0.repeat(1, batch_size, 1))
+            # inp, hn = self.the_rnn(inp)
+            last_timestep = hn[-1, :, :]
         else:
-            # inp, hn = self.the_rnn(inp, self.h0)
-            inp, hn = self.the_rnn(inp)
-            last_timestep = hn[-1]
+            inp, hn = self.the_rnn(inp, self.h0)
+            # inp, hn = self.the_rnn(inp)
+            last_timestep = hn[-1, :, :]
         #
         return last_timestep
 
@@ -86,9 +86,13 @@ class node2vec_rnn(nn.Module):
         phr = self.rnn_representation_one(phr)
         pos = self.rnn_representation_one(pos)
 
+        neg1 = neg[:self.batch_size, :, :]
+        neg2 = neg[self.batch_size:, :, :]
         # because negative sampling is 1..thats why i can pass it like that.
         # otherwise you have to use a for loop or something.
-        neg = self.rnn_representation_one(neg)
+        # neg = self.rnn_representation_one(neg)
+        neg = torch.cat([self.rnn_representation_one(n) for n in [neg1, neg2]])
+        neg = neg.view(phr.shape[0], self.neg_sample_num, -1)
 
         return phr, pos, neg
 
@@ -96,11 +100,11 @@ class node2vec_rnn(nn.Module):
         score = torch.mul(phr_emb, context_emb)
         score = torch.sum(score, dim=1)
         log_target = F.logsigmoid(score)
-        # neg_score = torch.bmm(neg_emb, phr_emb.unsqueeze(2)).squeeze()
-        neg_score = torch.mul(phr_emb, neg_emb)
-        neg_score = torch.sum(neg_score, dim=1)
+        neg_score = torch.bmm(neg_emb, phr_emb.unsqueeze(2)).squeeze()
+        # neg_score = torch.mul(phr_emb, neg_emb)
+        # neg_score = torch.sum(neg_score, dim=1)
         sum_log_sampled = F.logsigmoid(-1 * neg_score)
-        # sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
+        sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
         loss = log_target + sum_log_sampled
         return -1 * torch.mean(loss)
 
