@@ -12,11 +12,8 @@ walk_index = 0
 
 class Utils(object):
     def __init__(self, walks, window_size, walk_length):
-        # self.phrase_dic = clean_dictionary(pickle.load(
-        #     open('C:/Users/sotir/PycharmProjects/thesis/relation_utilities/isa/isa_reversed_dic.p', 'rb')))
-        # self.phrase_dic = clean_dictionary(pickle.load(open('drive/My Drive/node2vec_average_embeddings/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
         self.phrase_dic = clean_dictionary(pickle.load(
-            open('/home/paperspace/sotiris/thesis/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
+            open('/home/sotkot/node2vec_word_embeds/relation_utilities/isa/isa_reversed_dic.p', 'rb')))
         self.stop = True
         self.window_size = window_size
         self.walk_length = walk_length
@@ -25,10 +22,8 @@ class Utils(object):
         self.vocabulary_size = len(self.word2idx)
         print("Total words: ", self.vocabulary_size)
         self.train_data = data
-        # self.current_walk = self.get_walk()
         # the sample_table it is used for negative sampling as they do in the original word2vec
         self.sample_table = self.create_sample_table()
-        # self.node2vec_yielder(self.window_size)
 
     def build_word_vocab(self, walks):
         data_vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence

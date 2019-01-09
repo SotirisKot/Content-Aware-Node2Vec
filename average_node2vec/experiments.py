@@ -15,19 +15,19 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run node2vec.")
 
     parser.add_argument('--input', nargs='?',
-                        default='/home/paperspace/sotiris/thesis/relation_instances_edgelists/part_of_relations.edgelist',
+                        default='/home/sotkot/node2vec_word_embeds/relation_instances_edgelists/isa_relations.edgelist',
                         help='Input graph path')
 
-    parser.add_argument('--output', nargs='?', default='part_of_average_2_words_link_predict.emb',
+    parser.add_argument('--output', nargs='?', default='isa_average_embeddings.emb',
                         help='Embeddings path')
 
     parser.add_argument('--dimensions', type=int, default=30,
                         help='Number of dimensions. Default is 128.')
 
-    parser.add_argument('--walk-length', type=int, default=80,
+    parser.add_argument('--walk-length', type=int, default=40,
                         help='Length of walk per source. Default is 80.')
 
-    parser.add_argument('--num-walks', type=int, default=10,
+    parser.add_argument('--num-walks', type=int, default=5,
                         help='Number of walks per source. Default is 10.')
 
     parser.add_argument('--window-size', type=int, default=5,
@@ -266,18 +266,18 @@ def main(args):
     nx_G = read_graph(file=args.input, get_connected_graph=False, remove_selfloops=True)
     print(nx_G.number_of_nodes(), nx_G.number_of_edges())
     train_pos = pickle.load(open(
-        '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_pos.p',
+        '/home/sotkot/node2vec_word_embeds/isa-undirected-dataset-train-test-splits/isa_train_pos.p',
         'rb'))
     test_pos = pickle.load(open(
-        '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_pos.p',
+        '/home/sotkot/node2vec_word_embeds/isa-undirected-dataset-train-test-splits/isa_test_pos.p',
         'rb'))
     train_neg = pickle.load(
         open(
-            '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_neg.p',
+            '/home/sotkot/node2vec_word_embeds/isa-undirected-dataset-train-test-splits/isa_train_neg.p',
             'rb'))
     test_neg = pickle.load(
         open(
-            '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_neg.p',
+            '/home/sotkot/node2vec_word_embeds/isa-undirected-dataset-train-test-splits/isa_test_neg.p',
             'rb'))
     # train_pos, train_neg, test_pos, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
     # train_neg, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
@@ -286,7 +286,7 @@ def main(args):
     print('Number of positive testing samples: ', len(test_pos))
     print('Number of negative testing samples: ', len(test_neg))
     train_graph = read_graph(
-        file='/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_graph_undirected.edgelist',
+        file='/home/sotkot/node2vec_word_embeds/isa-undirected-dataset-train-test-splits/isa_train_graph_undirected.edgelist',
         get_connected_graph=False, remove_selfloops=False)
     print(
         'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))

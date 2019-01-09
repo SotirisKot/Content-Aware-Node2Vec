@@ -64,10 +64,8 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        # self.odir_checkpoint = 'drive/My Drive/pytorch-node2vec-umls-relations/checkpoints/'
-        # self.odir_embeddings = 'drive/My Drive/pytorch-node2vec-umls-relations/embeddings/'
-        self.odir_checkpoint = '/home/paperspace/sotiris/'
-        self.odir_embeddings = '/home/paperspace/sotiris/'
+        self.odir_checkpoint = '/home/sotkot/checkpoints/'
+        self.odir_embeddings = '/home/sotkot/embeddings/'
         self.output_file = output_file
         self.wv = {}
 
@@ -116,10 +114,16 @@ class Node2Vec:
                     batch_costs = []
                 batch_num += 1
 
+                if batch_num % 1000000 == 0:
+                    state = {'batches': batch_num, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
+                    save_checkpoint(state,
+                                    filename=self.odir_checkpoint + 'isa_checkpoint_batch_{}.pth.tar'.format(
+                                        batch_num))
+
             print()
             state = {'epoch': epoch + 1, 'state_dict': model.state_dict(), 'optimizer': optimizer.state_dict()}
             save_checkpoint(state,
-                            filename=self.odir_checkpoint + 'part_of_average_2_checkpoint_epoch_{}.pth.tar'.format(
+                            filename=self.odir_checkpoint + 'isa_checkpoint_epoch_{}.pth.tar'.format(
                                 epoch + 1))
             self.utils.stop = True
         print("Optimization Finished!")

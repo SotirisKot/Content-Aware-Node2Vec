@@ -8,10 +8,21 @@
         </list>
       </option>
     </inspection_tool>
+    <inspection_tool class="PyPep8NamingInspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoredErrors">
+        <list>
+          <option value="N806" />
+        </list>
+      </option>
+    </inspection_tool>
     <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="ignoredIdentifiers">
         <list>
           <option value="torch.from_numpy" />
+          <option value="rnn_node2vec.rnn_batch_node2vec_pytorch.rnn_node2vec_utils" />
+          <option value="rnn_node2vec.rnn_batch_node2vec_pytorch.rnn_batch_skipgram" />
+          <option value="rnn_batch_skipgram" />
+          <option value="rnn_node2vec.rnn_batch_node2vec_pytorch.*" />
         </list>
       </option>
     </inspection_tool>

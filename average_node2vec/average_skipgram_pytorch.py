@@ -5,6 +5,8 @@ import torch.nn.functional as F
 import numpy as np
 import pdb
 from tqdm import tqdm
+import os
+import pickle
 my_seed = 1997
 torch.manual_seed(my_seed)
 torch.cuda.manual_seed(my_seed)
@@ -80,4 +82,7 @@ class SkipGram(nn.Module):
             wv[w] = e
             e = ' '.join(map(lambda x: str(x), e))
             fout.write('%s %s\n' % (w, e))
+
+        with open("{}.p".format(os.path.join(file_name, 'isa_word_embeds_dict')), 'wb') as dump_file:
+            pickle.dump(wv, dump_file)
         return wv
