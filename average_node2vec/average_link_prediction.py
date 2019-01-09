@@ -115,7 +115,7 @@ def get_edge_embeddings(edge_list, node_embeddings, phrase_dic):
 
 def load_embeddings(file):
     node_embeddings = {}
-    odir = 'C:/Users/sotir/Desktop/isa_embeddings/'
+    odir = 'C:/Users/sotir/Desktop/part_of/rnn'
     with codecs.open("{}".format(os.path.join(odir, file)), 'r', 'utf-8') as embeddings:
         embeddings.readline()
         for i, line in enumerate(embeddings):
@@ -142,15 +142,18 @@ def get_average_embedding(phrase, node_embeddings):
 
 def main(args):
     train_pos = pickle.load(open(
-        'isa-undirected-dataset-train-test-splits/isa_train_pos.p',
+        'C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_pos.p',
         'rb'))
-    test_pos = pickle.load(
-        open('isa-undirected-dataset-train-test-splits/isa_test_pos.p', 'rb'))
+    test_pos = pickle.load(open(
+        'C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_pos.p',
+        'rb'))
     train_neg = pickle.load(
-        open('isa-undirected-dataset-train-test-splits/isa_train_neg.p', 'rb'))
+        open(
+            'C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_neg.p',
+            'rb'))
     test_neg = pickle.load(
         open(
-            'isa-undirected-dataset-train-test-splits/isa_test_neg.p',
+            'C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_neg.p',
             'rb'))
     # train_pos, train_neg, test_pos, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
     # train_neg, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
@@ -159,13 +162,13 @@ def main(args):
     print('Number of positive testing samples: ', len(test_pos))
     print('Number of negative testing samples: ', len(test_neg))
     train_graph = read_graph(
-        file='isa-undirected-dataset-train-test-splits/isa_train_graph_undirected.edgelist',
+        file='C:/Users/sotir/PycharmProjects/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_graph_undirected.edgelist',
         get_connected_graph=False, remove_selfloops=False)
     print(
         'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
     print('Number of connected components: ', nx.number_connected_components(train_graph))
-    node_embeddings = load_embeddings('isa_average_sum_words_link_predict.emb')
-    phrase_dic = clean_dictionary(pickle.load(open('relation_utilities/isa/isa_reversed_dic.p', 'rb')))
+    node_embeddings = load_embeddings('part_of_rnn_final_words_link_predict.emb')
+    phrase_dic = clean_dictionary(pickle.load(open('C:/Users/sotir/PycharmProjects/thesis/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
     # for training
     train_pos_edge_embs = get_edge_embeddings(train_pos, node_embeddings, phrase_dic)
     train_neg_edge_embs = get_edge_embeddings(train_neg, node_embeddings, phrase_dic)
