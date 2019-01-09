@@ -41,10 +41,8 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        # self.odir_checkpoint = 'drive/My Drive/node2vec_average_embeddings/checkpoints/'
-        # self.odir_embeddings = 'drive/My Drive/node2vec_average_embeddings/embeddings/'
-        self.odir_checkpoint = '/home/paperspace/sotiris/thesis/baseline0/'
-        self.odir_embeddings = '/home/paperspace/sotiris/thesis/baseline0/'
+        self.odir_checkpoint = 'drive/My Drive/node2vec_average_embeddings/checkpoints/'
+        self.odir_embeddings = 'drive/My Drive/node2vec_average_embeddings/embeddings/'
         self.output_file = output_file
         self.wv = {}
 
@@ -58,7 +56,7 @@ class Node2Vec:
 
         optimizer = optim.SparseAdam(params, lr=0.001)
         dataset = Node2VecDataset(self.utils, self.batch_size, self.neg_sample_num)
-        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False)
+        dataloader = DataLoader(dataset=dataset, batch_size=self.batch_size, shuffle=False, num_workers=1)
 
         for epoch in range(self.epochs):
             batch_num = 0

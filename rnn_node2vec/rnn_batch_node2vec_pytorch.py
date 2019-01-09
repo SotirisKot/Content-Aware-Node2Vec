@@ -70,7 +70,8 @@ class Node2Vec:
     def __init__(self, walks, output_file, walk_length, embedding_dim=128, rnn_size=50, epochs=10, batch_size=32, window_size=10,
                  neg_sample_num=5):
         self.utils = Utils(walks, window_size, walk_length)
-        self.vocabulary_size = self.utils.vocabulary_size
+        # self.vocabulary_size = self.utils.vocabulary_size
+        self.vocabulary_size = 1917
         self.node2phr = self.utils.phrase_dic
         self.word2idx = self.utils.word2idx
         # self.word2idx = self.create_word2idx()
@@ -80,10 +81,8 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        # self.odir_checkpoint = 'drive/My Drive/rnn_node2vec/checkpoints/'
-        # self.odir_embeddings = 'drive/My Drive/rnn_node2vec/embeddings/'
-        self.odir_checkpoint = '/home/paperspace/sotiris/thesis/rnn_node2vec/'
-        self.odir_embeddings = '/home/paperspace/sotiris/thesis/rnn_node2vec/'
+        self.odir_checkpoint = 'drive/My Drive/rnn_node2vec/checkpoints/'
+        self.odir_embeddings = 'drive/My Drive/rnn_node2vec/embeddings/'
         self.output_file = output_file
         self.wv = {}
 
@@ -97,7 +96,7 @@ class Node2Vec:
             print('GPU available!!')
             model.cuda()
 
-        optimizer = optim.Adam(params, lr=0.0001)
+        optimizer = optim.Adam(params, lr=0.001)
         dataset = Node2VecDataset(self.utils, self.neg_sample_num)
         dataloader = DataLoader(dataset=dataset,
                                 batch_size=self.batch_size,
@@ -157,7 +156,7 @@ class Node2Vec:
             device = torch.device('cpu')
         #
         model.eval()
-        modelCheckpoint = torch.load('C:/Users/sotir/Desktop/part_of/part_of_rnn_final_checkpoint_epoch_1.pth.tar', map_location=device)
+        modelCheckpoint = torch.load('C:/Users/sotir/Desktop/part_of/rnn/part_of_rnn_final_checkpoint_epoch_1.pth.tar', map_location=device)
         model.load_state_dict(modelCheckpoint['state_dict'])
         #
         print('Number of positive training samples: ', len(train_pos))
@@ -166,7 +165,8 @@ class Node2Vec:
         print('Number of negative testing samples: ', len(test_neg))
         phrase_dic = clean_dictionary(pickle.load(
             open('C:/Users/sotir/PycharmProjects/thesis/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
-        node_embeddings = self.create_node_embeddings(model, phrase_dic)
+        word2idx = modelCheckpoint['word2idx']
+        node_embeddings = self.create_node_embeddings(model, phrase_dic, word2idx)
 
         train_pos_edge_embs = self.get_edge_embeddings(train_pos, node_embeddings, phrase_dic)
         train_neg_edge_embs = self.get_edge_embeddings(train_neg, node_embeddings, phrase_dic)
@@ -197,29 +197,31 @@ class Node2Vec:
         print('node2vec Test ROC score: ', str(test_roc))
         print('node2vec Test AUC score: ', str(test_auc))
 
-    def create_node_embeddings(self, model, phrase_dic):
+    def create_node_embeddings(self, model, phrase_dic, word2idx):
+        odir = 'C:/Users/sotir/Desktop/part_of/rnn/'
         with torch.no_grad():
-            file_name = 'rnn_inference_phrases.emb'
+            file_name = 'rnn_inference_phrases_with_names.emb'
             node_embeddings = {}
+            node_embeddings_phrases = {}
             fout = open(file_name, 'w')
-            fout.write('%d %d\n' % (len(self.word2idx), self.embedding_dim))
+            fout.write('%d %d\n' % (len(word2idx), self.embedding_dim))
             for phr_id in tqdm(phrase_dic.keys()):
                 phrase = phrase_dic[phr_id]
-                phr = [phr2idx(phrase, self.word2idx)]
+                phr = [phr2idx(phrase, word2idx)]
                 phrase_emb = model(phr).squeeze(0)
                 node_embeddings[phr_id] = phrase_emb.numpy()
+                node_embeddings_phrases[phrase] = phrase_emb.numpy()
                 e = ' '.join(map(lambda x: str(x), phrase_emb.numpy()))
-                fout.write('%s %s\n' % (phr_id, e))
+                fout.write('%s %s\n' % (phrase, e))
             print(len(node_embeddings))
+            with open("{}.p".format(os.path.join(odir, 'node_embeddings_phrases')), 'wb') as dump_file:
+                pickle.dump(node_embeddings_phrases, dump_file)
             return node_embeddings
 
     def get_edge_embeddings(self, edge_list, node_embeddings, phrase_dic):
         # create a list containing edge embeddings
         edge_embeddings = []
         for edge in edge_list:
-            if edge[0] == 0 or edge[1] == 0:
-                print(phrase_dic[edge[0]])
-                print(phrase_dic[edge[1]])
             emb_node1 = node_embeddings[edge[0]]
             emb_node2 = node_embeddings[edge[1]]
             hadamard = np.multiply(emb_node1, emb_node2)

@@ -33,8 +33,8 @@ class SkipGram(nn.Module):
         neg_score = torch.bmm(neg_embed_v, embed_u.unsqueeze(2)).squeeze()
         sum_log_sampled = F.logsigmoid(-1 * neg_score)
         sum_log_sampled = torch.sum(sum_log_sampled, dim=1)
-        loss = - (log_target + sum_log_sampled)
-        return torch.mean(loss)
+        loss = log_target + sum_log_sampled
+        return -1 * torch.mean(loss)
 
     def save_embeddings(self, file_name, idx2word, use_cuda=False):
         wv = {}
