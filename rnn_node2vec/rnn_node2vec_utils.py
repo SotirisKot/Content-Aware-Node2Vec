@@ -4,8 +4,9 @@ import re
 from tqdm import tqdm
 import numpy as np
 import math
+import config
 from pprint import pprint
-from keras.preprocessing.sequence import pad_sequences
+# from keras.preprocessing.sequence import pad_sequences
 
 np.random.seed(12345)
 data_index = 0
@@ -14,20 +15,19 @@ walk_index = 0
 
 class Utils(object):
     def __init__(self, walks, window_size, walk_length):
-        # self.phrase_dic = clean_dictionary(pickle.load(
-        #      open('C:/Users/sotir/PycharmProjects/thesis/relation_utilities/isa/isa_reversed_dic.p', 'rb')))
-        # self.phrase_dic = clean_dictionary(pickle.load(open('drive/My Drive/node2vec_average_embeddings/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
-        self.phrase_dic = clean_dictionary(pickle.load(open('/home/paperspace/sotiris/thesis/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
+        self.phrase_dic = clean_dictionary(pickle.load(open(config.phrase_dic, 'rb')))
         self.stop = True
         self.walk_length = walk_length
         self.window_size = window_size
         self.walks = walks
-        data, self.frequencies, self.word2idx, self.idx2word = self.build_dataset(self.walks)
-        self.vocabulary_size = len(self.word2idx)
-        print("Total words: ", self.vocabulary_size)
-        self.train_data = data
-        # the sample_table it is used for negative sampling as they do in the original word2vec
-        self.sample_table = self.create_sample_table()
+
+        if self.walks is not None:
+            data, self.frequencies, self.word2idx, self.idx2word = self.build_dataset(self.walks)
+            self.vocabulary_size = len(self.word2idx)
+            print("Total words: ", self.vocabulary_size)
+            self.train_data = data
+            # the sample_table it is used for negative sampling as they do in the original word2vec
+            self.sample_table = self.create_sample_table()
 
     def build_word_vocab(self, walks):
         data_vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence

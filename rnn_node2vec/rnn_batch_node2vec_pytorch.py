@@ -15,6 +15,7 @@ from tqdm import tqdm
 import pickle
 import codecs
 import os
+import config
 # from keras.preprocessing.sequence import pad_sequences
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve, auc, roc_auc_score
@@ -70,10 +71,10 @@ class Node2Vec:
     def __init__(self, walks, output_file, walk_length, embedding_dim=128, rnn_size=50, epochs=10, batch_size=32, window_size=10,
                  neg_sample_num=5):
         self.utils = Utils(walks, window_size, walk_length)
-        # self.vocabulary_size = self.utils.vocabulary_size
-        self.vocabulary_size = 1917
-        self.node2phr = self.utils.phrase_dic
-        self.word2idx = self.utils.word2idx
+        if walks is not None:
+            self.vocabulary_size = self.utils.vocabulary_size
+            self.node2phr = self.utils.phrase_dic
+            self.word2idx = self.utils.word2idx
         # self.word2idx = self.create_word2idx()
         self.embedding_dim = embedding_dim
         self.rnn_size = rnn_size
@@ -81,8 +82,8 @@ class Node2Vec:
         self.batch_size = batch_size
         self.epochs = epochs
         self.neg_sample_num = neg_sample_num
-        self.odir_checkpoint = 'drive/My Drive/rnn_node2vec/checkpoints/'
-        self.odir_embeddings = 'drive/My Drive/rnn_node2vec/embeddings/'
+        self.odir_checkpoint = config.checkpoint_dir
+        self.odir_embeddings = config.embeddings_dir
         self.output_file = output_file
         self.wv = {}
 
@@ -96,7 +97,7 @@ class Node2Vec:
             print('GPU available!!')
             model.cuda()
 
-        optimizer = optim.Adam(params, lr=0.001)
+        optimizer = optim.Adam(params, lr=config.lr)
         dataset = Node2VecDataset(self.utils, self.neg_sample_num)
         dataloader = DataLoader(dataset=dataset,
                                 batch_size=self.batch_size,
@@ -134,8 +135,7 @@ class Node2Vec:
                      'word2idx': self.word2idx,
                      'idx2word': self.utils.idx2word}
             save_checkpoint(state,
-                            filename=self.odir_checkpoint + 'part_of_rnn_final_checkpoint_epoch_{}.pth.tar'.format(
-                                epoch + 1))
+                            filename=self.odir_checkpoint + config.checkpoint_name.format(epoch + 1))
             self.utils.stop = True
         print("Optimization Finished!")
         self.wv = model.save_embeddings(file_name=self.odir_embeddings + self.output_file,
@@ -143,20 +143,27 @@ class Node2Vec:
                                         use_cuda=True)
 
     def eval(self, train_pos, train_neg, test_pos, test_neg):
-        model = node2vec_rnn(self.vocabulary_size, self.embedding_dim, self.rnn_size, self.neg_sample_num,
+        if torch.cuda.is_available():
+            print('GPU available!!')
+            device = torch.device('gpu')
+        else:
+            device = torch.device('cpu')
+
+        modelCheckpoint = torch.load('C:/Users/sotir/Desktop/part_of/rnn/part_of_rnn_final_checkpoint_epoch_1.pth.tar',
+                                     map_location=device)
+        vocabulary_size = len(modelCheckpoint['word2idx'])
+
+        model = node2vec_rnn(vocabulary_size, self.embedding_dim, self.rnn_size, self.neg_sample_num,
                              self.batch_size,
                              self.window_size)
         print_params(model)
         params = model.parameters()
+
         if torch.cuda.is_available():
             print('GPU available!!')
             model.cuda()
-            device = torch.device('gpu')
-        else:
-            device = torch.device('cpu')
         #
         model.eval()
-        modelCheckpoint = torch.load('C:/Users/sotir/Desktop/part_of/rnn/part_of_rnn_final_checkpoint_epoch_1.pth.tar', map_location=device)
         model.load_state_dict(modelCheckpoint['state_dict'])
         #
         print('Number of positive training samples: ', len(train_pos))

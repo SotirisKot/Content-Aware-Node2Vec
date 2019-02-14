@@ -6,6 +6,7 @@ import networkx as nx
 import node2vec
 import os
 import pickle
+import config
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 from rnn_batch_node2vec_pytorch import Node2Vec
@@ -15,22 +16,22 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run node2vec.")
 
     parser.add_argument('--input', nargs='?',
-                        default='/home/paperspace/sotiris/thesis/relation_instances_edgelists/part_of_relations.edgelist',
+                        default=config.input_edgelist,
                         help='Input graph path')
 
-    parser.add_argument('--output', nargs='?', default='part_of_rnn_final_words_link_predict.emb',
+    parser.add_argument('--output', nargs='?', default=config.output_file,
                         help='Embeddings path')
 
-    parser.add_argument('--dimensions', type=int, default=30,
+    parser.add_argument('--dimensions', type=int, default=config.dimensions,
                         help='Number of dimensions. Default is 128.')
 
-    parser.add_argument('--walk-length', type=int, default=40,
+    parser.add_argument('--walk-length', type=int, default=config.walk_length,
                         help='Length of walk per source. Default is 80.')
 
-    parser.add_argument('--num-walks', type=int, default=10,
+    parser.add_argument('--num-walks', type=int, default=config.num_walks,
                         help='Number of walks per source. Default is 10.')
 
-    parser.add_argument('--window-size', type=int, default=5,
+    parser.add_argument('--window-size', type=int, default=config.window_size,
                         help='Context size for optimization. Default is 10.')
 
     parser.add_argument('--iter', default=1, type=int,
@@ -39,10 +40,10 @@ def parse_args():
     parser.add_argument('--workers', type=int, default=8,
                         help='Number of parallel workers. Default is 8.')
 
-    parser.add_argument('--p', type=float, default=1,
+    parser.add_argument('--p', type=float, default=config.p,
                         help='Return hyperparameter. Default is 1.')
 
-    parser.add_argument('--q', type=float, default=1,
+    parser.add_argument('--q', type=float, default=config.q,
                         help='Inout hyperparameter. Default is 1.')
 
     parser.add_argument('--weighted', dest='weighted', action='store_true',
@@ -86,16 +87,24 @@ def read_graph(file, get_connected_graph=True, remove_selfloops=True):
         return G
 
 
-def learn_embeddings(walks):
+def learn_embeddings(walks, train_pos=None, train_neg=None, test_pos=None, test_neg=None, eval_bool=False):
     # walks = [map(str, walk) for walk in walks] # this will work on python2 but not in python3
-    print('Creating walk corpus..')
-    walks = [list(map(str, walk)) for walk in walks]  # this is for python3
-    model = Node2Vec(walks=walks, output_file=args.output, walk_length=args.walk_length, embedding_dim=args.dimensions,
-                     epochs=args.iter, batch_size=128, window_size=args.window_size, neg_sample_num=1)
-    print('Optimization started...')
-    model.train()
-    embeddings = model.wv
-    return embeddings
+    if not eval_bool:
+        print('Creating walk corpus..')
+        walks = [list(map(str, walk)) for walk in walks]  # this is for python3
+        model = Node2Vec(walks=walks, output_file=args.output, walk_length=args.walk_length,
+                         embedding_dim=args.dimensions,
+                         epochs=args.iter, batch_size=config.batch_size, window_size=args.window_size, neg_sample_num=config.neg_samples)
+        print('Optimization started...')
+        model.train()
+        embeddings = model.wv
+        return embeddings
+    else:
+        model = Node2Vec(walks=None, output_file=args.output, walk_length=args.walk_length,
+                         embedding_dim=args.dimensions,
+                         epochs=args.iter, batch_size=config.batch_size, window_size=args.window_size, neg_sample_num=config.neg_samples)
+        print('Evaluation started...')
+        model.eval(train_pos, train_neg, test_pos, test_neg)
 
 
 def create_train_test_splits(percent_pos, percent_neg, graph):
@@ -265,20 +274,12 @@ def load_embeddings(file):
 def main(args):
     nx_G = read_graph(file=args.input, get_connected_graph=False, remove_selfloops=True)
     print(nx_G.number_of_nodes(), nx_G.number_of_edges())
-    train_pos = pickle.load(open(
-        '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_pos.p',
-        'rb'))
-    test_pos = pickle.load(open(
-        '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_pos.p',
-        'rb'))
-    train_neg = pickle.load(
-        open(
-            '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_neg.p',
-            'rb'))
-    test_neg = pickle.load(
-        open(
-            '/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_test_neg.p',
-            'rb'))
+
+    train_pos = pickle.load(open(config.train_pos, 'rb'))
+    test_pos = pickle.load(open(config.test_pos, 'rb'))
+    train_neg = pickle.load(open(config.train_neg, 'rb'))
+    test_neg = pickle.load(open(config.test_neg, 'rb'))
+
     # train_pos, train_neg, test_pos, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
     # train_neg, test_neg = create_train_test_splits(0.5, 0.5, nx_G)
     print('Number of positive training samples: ', len(train_pos))
@@ -286,8 +287,9 @@ def main(args):
     print('Number of positive testing samples: ', len(test_pos))
     print('Number of negative testing samples: ', len(test_neg))
     train_graph = read_graph(
-        file='/home/paperspace/sotiris/thesis/part_of-undirected-dataset-train-test-splits/part_of_train_graph_undirected.edgelist',
-        get_connected_graph=False, remove_selfloops=False)
+        file=config.train_graph,
+        get_connected_graph=False,
+        remove_selfloops=False)
     print(
         'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
     print('Number of connected components: ', nx.number_connected_components(train_graph))
