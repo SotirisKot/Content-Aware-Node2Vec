@@ -23,6 +23,7 @@
           <option value="rnn_node2vec.rnn_batch_node2vec_pytorch.rnn_batch_skipgram" />
           <option value="rnn_batch_skipgram" />
           <option value="rnn_node2vec.rnn_batch_node2vec_pytorch.*" />
+          <option value="rnn_node2vec.experiments.rnn_batch_node2vec_pytorch" />
         </list>
       </option>
     </inspection_tool>
