@@ -3,10 +3,6 @@ import torch
 from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-import numpy as np
-import pdb
-from tqdm import tqdm
 my_seed = 1997
 torch.manual_seed(my_seed)
 torch.cuda.manual_seed(my_seed)
@@ -48,6 +44,7 @@ class node2vec_rnn(nn.Module):
             seq_lengths_neg = torch.LongTensor([len(seq) for seq in neg_inds])
 
             if torch.cuda.is_available():
+                # print("Cuda Available!!")
                 seq_lengths_phr.cuda()
                 seq_lengths_pos.cuda()
                 seq_lengths_neg.cuda()
@@ -64,11 +61,12 @@ class node2vec_rnn(nn.Module):
     def pad_sequences(self, vectorized_seqs, seq_lengths):
         seq_tensor = torch.zeros((len(vectorized_seqs), seq_lengths.max())).long()
 
+        for idx, (seq, seqlen) in enumerate(zip(vectorized_seqs, seq_lengths)):
+            seq_tensor[idx, -seqlen:] = torch.LongTensor(seq)
+
         if torch.cuda.is_available():
             seq_tensor.cuda()
 
-        for idx, (seq, seqlen) in enumerate(zip(vectorized_seqs, seq_lengths)):
-            seq_tensor[idx, -seqlen:] = torch.LongTensor(seq)
         return seq_tensor
 
     def get_words_embeds(self, phr, pos, neg):
