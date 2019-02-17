@@ -89,16 +89,6 @@ class node2vec_rnn(nn.Module):
         neg = self.rnn_representation_one(neg)
         neg = neg.view(phr.shape[0], self.neg_sample_num, -1)
 
-        # if self.neg_sample_num == 1:
-        #     # because negative sampling is 1..thats why i can pass it like that.
-        #     # otherwise you have to use a for loop or something.
-        #     neg = self.rnn_representation_one(neg)
-        # else:
-        # neg1 = neg[:self.batch_size, :, :]
-        # neg2 = neg[self.batch_size:, :, :]
-        # neg = torch.cat([self.rnn_representation_one(n) for n in [neg1, neg2]])
-        # neg = neg.view(phr.shape[0], self.neg_sample_num, -1)
-
         return phr, pos, neg
 
     def get_loss(self, phr_emb, context_emb, neg_emb):
