@@ -149,9 +149,9 @@ class Node2Vec:
         else:
             device = torch.device('cpu')
 
-        modelCheckpoint = torch.load('C:/Users/sotir/Desktop/part_of/rnn/part_of_rnn_final_checkpoint_epoch_1.pth.tar',
+        modelcheckpoint = torch.load('/home/sotiris/Downloads/part_of_rnn_test_new_lr_checkpoint_epoch_1.pth.tar',
                                      map_location=device)
-        vocabulary_size = len(modelCheckpoint['word2idx'])
+        vocabulary_size = len(modelcheckpoint['word2idx'])
 
         model = node2vec_rnn(vocabulary_size, self.embedding_dim, self.rnn_size, self.neg_sample_num,
                              self.batch_size,
@@ -164,15 +164,15 @@ class Node2Vec:
             model.cuda()
         #
         model.eval()
-        model.load_state_dict(modelCheckpoint['state_dict'])
+        model.load_state_dict(modelcheckpoint['state_dict'])
         #
         print('Number of positive training samples: ', len(train_pos))
         print('Number of negative training samples: ', len(train_neg))
         print('Number of positive testing samples: ', len(test_pos))
         print('Number of negative testing samples: ', len(test_neg))
         phrase_dic = clean_dictionary(pickle.load(
-            open('C:/Users/sotir/PycharmProjects/thesis/relation_utilities/part_of/part_of_reversed_dic.p', 'rb')))
-        word2idx = modelCheckpoint['word2idx']
+            open(config.phrase_dic, 'rb')))
+        word2idx = modelcheckpoint['word2idx']
         node_embeddings = self.create_node_embeddings(model, phrase_dic, word2idx)
 
         train_pos_edge_embs = self.get_edge_embeddings(train_pos, node_embeddings, phrase_dic)
@@ -205,7 +205,6 @@ class Node2Vec:
         print('node2vec Test AUC score: ', str(test_auc))
 
     def create_node_embeddings(self, model, phrase_dic, word2idx):
-        odir = 'C:/Users/sotir/Desktop/part_of/rnn/'
         with torch.no_grad():
             file_name = 'rnn_inference_phrases_with_names.emb'
             node_embeddings = {}
@@ -221,7 +220,7 @@ class Node2Vec:
                 e = ' '.join(map(lambda x: str(x), phrase_emb.numpy()))
                 fout.write('%s %s\n' % (phrase, e))
             print(len(node_embeddings))
-            with open("{}.p".format(os.path.join(odir, 'node_embeddings_phrases')), 'wb') as dump_file:
+            with open("{}.p".format('node_embeddings_phrases'), 'wb') as dump_file:
                 pickle.dump(node_embeddings_phrases, dump_file)
             return node_embeddings
 
@@ -235,18 +234,3 @@ class Node2Vec:
             edge_embeddings.append(hadamard)
         edge_embeddings = np.array(edge_embeddings)
         return edge_embeddings
-
-    def create_word2idx(self):
-        file = 'part_of_rnn_final_words_link_predict.emb'
-        word2idx = {}
-        word2idx['PAD'] = 0
-        word2idx['UNKN'] = len(word2idx)
-        odir = 'C:/Users/sotir/Desktop/part_of/'
-        with codecs.open("{}".format(os.path.join(odir, file)), 'r', 'utf-8') as embeddings:
-            for i in range(3):
-                embeddings.readline()
-            for i, line in enumerate(embeddings):
-                line = line.strip().split(' ')
-                word = line[0]
-                word2idx[word] = len(word2idx)
-        return word2idx

@@ -43,17 +43,15 @@ class node2vec_rnn(nn.Module):
             seq_lengths_pos = torch.LongTensor([len(seq) for seq in pos_inds])
             seq_lengths_neg = torch.LongTensor([len(seq) for seq in neg_inds])
 
-            if torch.cuda.is_available():
-                # print("Cuda Available!!")
-                seq_lengths_phr.cuda()
-                seq_lengths_pos.cuda()
-                seq_lengths_neg.cuda()
-
             seq_phr = self.pad_sequences(phr_inds, seq_lengths_phr)
             seq_pos = self.pad_sequences(pos_inds, seq_lengths_pos)
             seq_neg = self.pad_sequences(neg_inds, seq_lengths_neg)
 
-            return seq_phr, seq_pos, seq_neg
+            if torch.cuda.is_available():
+                return seq_phr.cuda(), seq_pos.cuda(), seq_neg.cuda()
+            else:
+                return seq_phr, seq_pos, seq_neg
+
         else:
             phr = Variable(torch.LongTensor(phr_inds), requires_grad=False)
             return phr
@@ -63,9 +61,6 @@ class node2vec_rnn(nn.Module):
 
         for idx, (seq, seqlen) in enumerate(zip(vectorized_seqs, seq_lengths)):
             seq_tensor[idx, -seqlen:] = torch.LongTensor(seq)
-
-        if torch.cuda.is_available():
-            seq_tensor.cuda()
 
         return seq_tensor
 
@@ -99,10 +94,10 @@ class node2vec_rnn(nn.Module):
         #     # otherwise you have to use a for loop or something.
         #     neg = self.rnn_representation_one(neg)
         # else:
-        #     neg1 = neg[:self.batch_size, :, :]
-        #     neg2 = neg[self.batch_size:, :, :]
-        #     neg = torch.cat([self.rnn_representation_one(n) for n in [neg1, neg2]])
-        #     neg = neg.view(phr.shape[0], self.neg_sample_num, -1)
+        # neg1 = neg[:self.batch_size, :, :]
+        # neg2 = neg[self.batch_size:, :, :]
+        # neg = torch.cat([self.rnn_representation_one(n) for n in [neg1, neg2]])
+        # neg = neg.view(phr.shape[0], self.neg_sample_num, -1)
 
         return phr, pos, neg
 
