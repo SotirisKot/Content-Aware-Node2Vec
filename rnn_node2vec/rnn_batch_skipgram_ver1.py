@@ -32,16 +32,17 @@ class node2vec_rnn(nn.Module):
         self.scale = scale
         self.max_norm = max_norm
         # self.h0 = nn.Parameter(torch.randn(1, 1, self.rnn_size).uniform_(-self.scale, self.scale))
-        self.the_rnn = nn.GRU(input_size=self.embedding_dim, hidden_size=config.hidden_size, num_layers=self.nlayers, bidirectional=self.bidirectional,
+        self.the_rnn = nn.GRU(input_size=self.embedding_dim, hidden_size=50, num_layers=self.nlayers, bidirectional=self.bidirectional,
                               bias=True, dropout=self.dropout, batch_first=True)
         self.init_weights(self.scale)
-        self.init_emb()
+        # self.init_emb()
 
     def init_emb(self):
         initrange = 0.5 / self.embedding_dim
         self.u_embeddings.weight.data.uniform_(-initrange, initrange)
         self.u_embeddings.weight.data[0] = 0
-        self.v_embeddings.weight.data.uniform_(-0, 0)
+        self.v_embeddings.weight.data.uniform_(-initrange, initrange)
+        self.v_embeddings.weight.data[0] = 0
 
     def init_weights(self, scale=1e-4):
         for param in self.the_rnn.parameters():
@@ -57,45 +58,25 @@ class node2vec_rnn(nn.Module):
             seq_lengths_pos = torch.LongTensor([len(seq) for seq in pos_inds])
             seq_lengths_neg = torch.LongTensor([len(seq) for seq in neg_inds])
 
-            seq_phr, phr_lengths, phr_perm = self.pad_sequences(phr_inds, seq_lengths_phr)
-            seq_pos, pos_lengths, pos_perm = self.pad_sequences(pos_inds, seq_lengths_pos)
-            seq_neg, neg_lengths, neg_perm = self.pad_sequences(neg_inds, seq_lengths_neg)
+            seq_phr = self.pad_sequences(phr_inds, seq_lengths_phr)
+            seq_pos = self.pad_sequences(pos_inds, seq_lengths_pos)
+            seq_neg = self.pad_sequences(neg_inds, seq_lengths_neg)
 
             if torch.cuda.is_available():
-                return seq_phr.cuda(), \
-                       phr_lengths, \
-                       phr_perm.cuda(), \
-                       seq_pos.cuda(), \
-                       pos_lengths, \
-                       pos_perm.cuda(),\
-                       seq_neg.cuda(), \
-                       neg_lengths, \
-                       neg_perm.cuda()
+                return seq_phr.cuda(), seq_pos.cuda(), seq_neg.cuda()
             else:
-                return seq_phr, \
-                       phr_lengths, \
-                       phr_perm, \
-                       seq_pos, \
-                       pos_lengths, \
-                       pos_perm,\
-                       seq_neg, \
-                       neg_lengths, \
-                       neg_perm
+                return seq_phr, seq_pos, seq_neg
         else:
             phr = Variable(torch.LongTensor(phr_inds), requires_grad=False)
             return phr
 
     def pad_sequences(self, vectorized_seqs, seq_lengths):
-
         seq_tensor = torch.zeros((len(vectorized_seqs), seq_lengths.max())).long()
-        for idx, (seq, seq_len) in enumerate(zip(vectorized_seqs, seq_lengths)):
-            seq_tensor[idx, :seq_len] = torch.LongTensor(seq)
 
-        # Sort tensors by their length
-        seq_lengths, perm_idx = seq_lengths.sort(0, descending=True)
-        seq_tensor = seq_tensor[perm_idx]
+        for idx, (seq, seqlen) in enumerate(zip(vectorized_seqs, seq_lengths)):
+            seq_tensor[idx, -seqlen:] = torch.LongTensor(seq)
 
-        return seq_tensor, seq_lengths, perm_idx
+        return seq_tensor
 
     def get_words_embeds(self, phr, pos, neg):
         phr = self.u_embeddings(phr)
@@ -103,40 +84,23 @@ class node2vec_rnn(nn.Module):
         neg = self.v_embeddings(neg)
         return phr, pos, neg
 
-    def rnn_representation_one(self, inp, seq_lens=None, perm_idx=None):
+    def rnn_representation_one(self, inp):
         if self.training:
             # batch_size = inp.shape[0]
             # inp, hn = self.the_rnn(inp, self.h0.repeat(1, batch_size, 1))
-
-            # # Handling padding in Recurrent Networks
-            # gru_input = pack_padded_sequence(inp, seq_lens.data.cpu().numpy(), batch_first=True)
-            # output, _ = self.the_rnn(gru_input)
-
-            gru_input = pack_padded_sequence(inp, seq_lens.data.cpu().numpy(), batch_first=True)
-            hn = self.the_rnn(gru_input)[1].squeeze(0)  # get the last hidden states for the batch..we must unsort it
-
-            # for now we want only the last hidden states so we comment this out
-            # output, _ = torch.nn.utils.rnn.pad_packed_sequence(output, batch_first=True)
-
-            # # Un-sort by length.. we do not need it for now
-            # _, unperm_idx = perm_idx.sort(0)
-            # output = output.index_select(0, unperm_idx)
-
-            #unsort hidden and return last timesteps
-            _, unperm_idx = perm_idx.sort(0)
-            hn = hn.index_select(0, unperm_idx)
-
-            return hn
+            output, hn = self.the_rnn(inp)
+            last_timestep = hn[-1, :, :]
         else:
-            _, hn = self.the_rnn(inp)
+            # inp, hn = self.the_rnn(inp, self.h0)
+            output, hn = self.the_rnn(inp)
             last_timestep = hn[-1, :, :]
 
-            return last_timestep
+        return last_timestep
 
-    def get_rnn_representation(self, phr, phr_lens, phr_perm, pos, pos_lens, pos_perm, neg, neg_lens, neg_perm):
-        phr = self.rnn_representation_one(phr, phr_lens, phr_perm)
-        pos = self.rnn_representation_one(pos, pos_lens, pos_perm)
-        neg = self.rnn_representation_one(neg, neg_lens, neg_perm)
+    def get_rnn_representation(self, phr, pos, neg):
+        phr = self.rnn_representation_one(phr)
+        pos = self.rnn_representation_one(pos)
+        neg = self.rnn_representation_one(neg)
         neg = neg.view(phr.shape[0], self.neg_sample_num, -1)
 
         return phr, pos, neg
@@ -160,9 +124,9 @@ class node2vec_rnn(nn.Module):
 
     def forward(self, phr_inds=None, pos_inds=None, neg_inds=None, concat=False):
         if self.training:
-            phr, phr_lens, phr_perm, pos, pos_lens, pos_perm, neg, neg_lens, neg_perm = self.fix_input(phr_inds, pos_inds, neg_inds)
+            phr, pos, neg = self.fix_input(phr_inds, pos_inds, neg_inds)
             phr, pos, neg = self.get_words_embeds(phr, pos, neg)
-            phr, pos, neg = self.get_rnn_representation(phr, phr_lens, phr_perm, pos, pos_lens, pos_perm, neg, neg_lens, neg_perm)
+            phr, pos, neg = self.get_rnn_representation(phr, pos, neg)
             loss = self.get_loss(phr, pos, neg)
             return loss
         else:  # here it is used for inference---> you can encode one sentence

@@ -6,7 +6,7 @@ from torch.autograd import Variable
 import torch.optim as optim
 import time
 from rnn_node2vec_utils import Utils
-# from rnn_batch_skipgram import node2vec_rnn
+#from rnn_batch_skipgram import node2vec_rnn
 from rnn_batch_skipgram_ver2 import node2vec_rnn
 from torch.utils.data import DataLoader
 from rnn_dataloader import Node2VecDataset
@@ -149,7 +149,7 @@ class Node2Vec:
         else:
             device = torch.device('cpu')
 
-        modelcheckpoint = torch.load('/home/sotiris/Downloads/part_of_rnn_test_new_lr_checkpoint_epoch_1.pth.tar',
+        modelcheckpoint = torch.load('/home/sotiris/Downloads/part_of_rnn_test_new_checkpoint_epoch_1.pth.tar',
                                      map_location=device)
         vocabulary_size = len(modelcheckpoint['word2idx'])
 
