@@ -92,14 +92,9 @@ class Node2Vec:
                 size = len(pos_u)
                 neg_v = np.random.choice(self.utils.sample_table, size=(size * self.neg_sample_num)).tolist()
 
-                if torch.cuda.is_available():
-                    pos_u = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)).cuda() for item in pos_u]
-                    pos_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)).cuda() for item in pos_v]
-                    neg_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)).cuda() for item in neg_v]
-                else:
-                    pos_u = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)) for item in pos_u]
-                    pos_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)) for item in pos_v]
-                    neg_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)) for item in neg_v]
+                pos_u = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)) for item in pos_u]
+                pos_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)) for item in pos_v]
+                neg_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.utils.word2idx)) for item in neg_v]
 
                 optimizer.zero_grad()
                 loss = model(pos_u, pos_v, neg_v)

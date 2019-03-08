@@ -9,6 +9,7 @@ class Graph():
 		self.is_directed = is_directed
 		self.p = p
 		self.q = q
+
 	def node2vec_walk(self, walk_length, start_node):
 		'''
 		Simulate a random walk starting from start node.
