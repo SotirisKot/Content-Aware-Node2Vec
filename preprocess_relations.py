@@ -63,7 +63,7 @@ def build_relation_edgelist(file_name, instances, phrase_dic):
 
 if __name__ == '__main__':
     odir = '/home/sotiris/Desktop/'
-    instances = load_instances('part_of.p', odir)
+    instances = load_instances('isa.p', odir)
     # with open('part_of.json', 'w') as fp:
     #     json.dump(instances, fp)
     #pprint(instances)
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     # print(len(phrases))
     # exit()
     #phrase_vocab, phrase_dic, reversed_dictionary = build_phrase_dic(instances)
-    phrase_dic = pickle.load(open('/home/sotiris/PycharmProjects/node2vec_word_embeds/data_utilities/part_of/part_of_phrase_dic.p', 'rb'))
+    phrase_dic = pickle.load(open('data_utilities/isa/isa_phrase_dic.p', 'rb'))
     # pprint(phrase_dic)
     # exit()
     # print(phrase_dic['Pleural cupula'])
@@ -89,4 +89,4 @@ if __name__ == '__main__':
     # print(len(instances))
     # print(len(phrase_vocab))
     # print(len(reversed_dictionary))
-    build_relation_edgelist('part_of_directed', instances, phrase_dic)
+    build_relation_edgelist('isa_directed', instances, phrase_dic)

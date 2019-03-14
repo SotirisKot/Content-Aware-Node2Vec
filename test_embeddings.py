@@ -169,9 +169,9 @@ def get_dictionary(reversed_dic, all_embeddings_dic):
 
 def load_dictionaries(words=False):
     if words:
-        all_embeddings_words = load_embeddings('/home/sotiris/Downloads/rnn_hard_part_of/part_of_rnn_residual_words_link_predict.emb')
+        all_embeddings_words = load_embeddings('/home/sotiris/Downloads/rnn_best_model/part_of_rnn_residual_words_link_predict.emb')
     else:
-        all_embeddings_words = pickle.load(open('/home/sotiris/Downloads/rnn_hard_part_of/node_embeddings_phrases.p', 'rb'))
+        all_embeddings_words = pickle.load(open('/home/sotiris/Downloads/rnn_self_attention/node_embeddings_phrases.p', 'rb'))
 
     return all_embeddings_words
 
@@ -291,10 +291,12 @@ def create_json_phrases(all_embeddings_phr, stress=None):
         elif stress == 1:
             phrase_words = phrase_target.split()
             phrase_words = set(phrase_words)
+            most_similar = []
             for ss in sorted_sims:
                 ss_parts = ss[0].split()
                 if len(phrase_words.intersection(ss_parts)) <= 1 and ss[1] >= 0.9:
-                    json_list.append(OrderedDict([('phrase', "target/" + phrase_target), ('most_similars', str(ss))]))
+                    most_similar.append(ss[0] + ", " + str(ss[1]))
+            json_list.append(OrderedDict([('phrase', "target/" + phrase_target), ('most_similars', most_similar[:5])]))
         else:
             phrase_words = phrase_target.split()
             phrase_words = set(phrase_words)
@@ -357,7 +359,7 @@ all_embeddings = load_dictionaries(words=True)
 # find_most_least_sim("wall of left seminal vesicle", all_embeddings=all_embeddings, word=False)
 # stress_test(all_embeddings)
 create_json_words(all_embeddings)
-# create_json_phrases(all_embeddings, stress=0)
+# create_json_phrases(all_embeddings, stress=1)
 # nums = [i for i in range(0, 1915)]
 # num = np.random.choice(nums, size=20).tolist()
 # print(num)

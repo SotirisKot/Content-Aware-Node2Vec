@@ -18,7 +18,9 @@ import itertools
 import json
 import seaborn as sns
 from collections import Counter
+from collections import OrderedDict
 import logging
+import webbrowser
 import config
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve, auc, roc_auc_score
@@ -310,10 +312,13 @@ class Node2Vec:
         test_pos_edge_embs = get_edge_embeddings(test_pos, node_embeddings, self.model_type, phrase_dic)
         test_neg_edge_embs = get_edge_embeddings(test_neg, node_embeddings, self.model_type, phrase_dic)
         test_set = np.concatenate([test_pos_edge_embs, test_neg_edge_embs])
+        # test_set_phrases = test_pos + test_neg
 
         # labels: 1-> link exists, 0-> false edge
         test_labels = np.zeros(len(test_set))
         test_labels[:len(test_pos_edge_embs)] = 1
+        # test_labels_phrases = np.zeros(len(test_set_phrases))
+        # test_labels_phrases[:len(test_pos)] = 1
 
         # train the classifier and evaluate in the test set
 
@@ -327,13 +332,16 @@ class Node2Vec:
         idx_list = [i for i in range(len(test_labels))]
         shuffle(idx_list)
         test_set = test_set[idx_list]
+        # test_set_phrases = test_set_phrases[idx_list]
         test_labels = test_labels[idx_list]
+        # test_labels_phrases = test_labels_phrases[idx_list]
 
         classifier = LogisticRegression()
         classifier.fit(train_set, train_labels)
 
         # evaluate
         test_preds = classifier.predict_proba(test_set)[:, 1]
+
         false_positive_rate, true_positive_rate, thresholds = roc_curve(test_labels, test_preds)
         test_auc = auc(false_positive_rate, true_positive_rate)
         test_roc = roc_auc_score(test_labels, test_preds)
@@ -347,7 +355,6 @@ class Node2Vec:
             node_embeddings_phrases = {}
             fout = open(file_name, 'w')
             fout.write('%d %d\n' % (len(word2idx), self.embedding_dim))
-            # json_dict = {}
             json_list_ultra = []
             keys = list(phrase_dic.keys())
             for phridx in tqdm(range(0, len(keys), self.batch_size)):
@@ -357,11 +364,10 @@ class Node2Vec:
                 phrase_emb, idx_u, idx_v = model(phr)
 
                 ###  create weights for visualizing the words that are getting pooled more often
-                json_list = create_pooling_weights_for_batch(idx_u, phrase_dic, batch)
+                # json_list = create_pooling_weights_for_batch(idx_u, phrase_dic, batch)
+                json_list = create_attention_weights_for_batch(idx_u, phrase_dic, batch)
                 for triplet in json_list:
                     json_list_ultra.append(triplet)
-                # for triplet in json_list:
-                #     json_dict[triplet[0]] = (triplet[1], triplet[2])
                 ###
 
                 for idx, phr_id in enumerate(batch):
@@ -378,16 +384,17 @@ class Node2Vec:
                         e = ' '.join(map(lambda x: str(x), phrase_emb[idx].numpy()))
                     ###
                     fout.write('%s %s\n' % (phrase, e))
+
             with open("{}.p".format('node_embeddings_phrases'), 'wb') as dump_file:
                 pickle.dump(node_embeddings_phrases, dump_file)
 
-            with open("json_pooling_weights.json", 'w') as fp:
-                json.dump(json_list_ultra, fp)
+            # with open("json_pooling_weights.json", 'w') as fp:
+            #     json.dump(json_list_ultra, fp)
+
+            #### create html file with the heatmap of each phrase
+            plot_attention(json_list_ultra, 'attention_part_of.html')
+            ####
             return node_embeddings
-
-
-# handler = None
-# logger, handler = init_logger(handler)
 
 
 def create_pooling_weights_for_batch(idx_u, phrase_dic, batch):
@@ -410,8 +417,95 @@ def create_pooling_weights_for_batch(idx_u, phrase_dic, batch):
                 scores[key_phr] = float(freqs[key]) / sum_val
                 i += 1
             else:
-                scores[phrase[key]] = float(freqs[key]) / sum_val
+                scores[phrase[key]] = float('{0:.4f}'.format(float(freqs[key]) / sum_val))
         json_list.append((phrase_str, scores))
     return json_list
 
+
+def create_attention_weights_for_batch(idx_u, phrase_dic, batch):
+    json_list = []
+    scores = {}
+    for idx, phr_id in enumerate(batch):
+        phrase = phrase_dic[phr_id]
+        phrase_str = ' '.join(phrase)
+        attn_phrase = idx_u[idx]
+        i = 0
+        for idx_word, word in enumerate(phrase):
+            if word in scores.keys():
+                double_phr = str(i)+"-"+word
+                scores[double_phr] = attn_phrase[idx_word]
+            else:
+                scores[word] = attn_phrase[idx_word]
+
+        json_list.append((phrase_str, scores))
+
+    return json_list
+
+
+def create_confusion_matrix(preds, phrase_dic, test_labels_phrases, test_set_phrases):
+    json_list_false_negative = []
+    json_list_false_positive = []
+    json_list_true_negative = []
+    json_list_true_positive = []
+    for idx, pred in enumerate(preds):
+        if pred[0] > pred[1] and test_labels_phrases[idx] == 1:
+            edge = test_set_phrases[idx]
+            phrase1 = " ".join(phrase_dic[edge[0]])
+            phrase2 = " ".join(phrase_dic[edge[1]])
+            json_list_false_negative.append(OrderedDict([("phrase1: ", str(phrase1)), ("phrase2: ", str(phrase2))]))
+        elif pred[0] < pred[1] and test_labels_phrases[idx] == 0:
+            edge = test_set_phrases[idx]
+            phrase1 = " ".join(phrase_dic[edge[0]])
+            phrase2 = " ".join(phrase_dic[edge[1]])
+            json_list_false_positive.append(OrderedDict([("phrase1: ", str(phrase1)), ("phrase2: ", str(phrase2))]))
+        elif pred[0] < pred[1] and test_labels_phrases[idx] == 1:
+            edge = test_set_phrases[idx]
+            phrase1 = " ".join(phrase_dic[edge[0]])
+            phrase2 = " ".join(phrase_dic[edge[1]])
+            json_list_true_positive.append(OrderedDict([("phrase1: ", str(phrase1)), ("phrase2: ", str(phrase2))]))
+        elif pred[0] > pred[1] and test_labels_phrases[idx] == 0:
+            edge = test_set_phrases[idx]
+            phrase1 = " ".join(phrase_dic[edge[0]])
+            phrase2 = " ".join(phrase_dic[edge[1]])
+            json_list_true_negative.append(OrderedDict([("phrase1: ", str(phrase1)), ("phrase2: ", str(phrase2))]))
+
+    with open("json_false_positive.json", 'w') as fp:
+        json.dump(json_list_false_positive, fp)
+
+    with open("json_false_negative.json", 'w') as fp:
+        json.dump(json_list_false_negative, fp)
+
+    with open("json_true_positive.json", 'w') as fp:
+        json.dump(json_list_true_positive, fp)
+
+    with open("json_true_negative.json", 'w') as fp:
+        json.dump(json_list_true_negative, fp)
+
+
+def plot_attention(json_list, filename):
+    html_content = '<!DOCTYPE html><html><head> ' \
+                   '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">' \
+                   '<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>' \
+                   '<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>' \
+                   '<style type="text/css">body { padding: 10px}span { border: 0px solid;}</style> </head>' \
+                   '<body>'
+
+    html_content += '<ul>'
+    for words, attention in json_list:
+        html_content += '<li>'
+        for word in words.split():
+            try:
+                html_content += '<span style= "background-color:rgba(255, 0, 0, {0:.1f});">{1} </span>'.format(attention[word], word)
+            except KeyError:
+                html_content += '<span>{} </span>'.format(word)
+        html_content += '<br/>'
+        html_content += '</li>'
+    html_content += '</ul>'
+    html_content += '</body>'
+    path = os.path.abspath(filename)
+    url = 'file://' + path
+
+    with open(path, 'w') as f:
+        f.write(html_content)
+    webbrowser.open(url)
 
