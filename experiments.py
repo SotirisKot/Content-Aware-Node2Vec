@@ -174,7 +174,7 @@ def create_train_test_splits_1st_way(percent_pos, percent_neg, graph, percent_de
             break
 
     print("Added: {} number of edges to positive test".format(counter2))
-    
+
     # now create false edges for test and train sets..making sure the edge is not a real edge
     # and not already sampled
     # first for test_set
