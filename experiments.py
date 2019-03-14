@@ -144,11 +144,11 @@ def create_train_test_splits_1st_way(percent_pos, percent_neg, graph, percent_de
     print('Creating positive test samples..')
     # shuffle the edges and iterate over them creating the test set
     np.random.shuffle(all_edges)
-    for idx, edge in enumerate(all_edges):
-        if idx % 100 == 0:
-            print('Edge: {}/{}'.format(idx, num_edges))
-            print('Added: ', counter2)
-            print('Not Added: ', counter1)
+    for edge in tqdm(all_edges):
+        # if idx % 100 == 0:
+        #     print('Edge: {}/{}'.format(idx, num_edges))
+        #     print('Added: ', counter2)
+        #     print('Not Added: ', counter1)
         node1 = edge[0]
         node2 = edge[1]
         # make sure that the graph remains connected
@@ -173,6 +173,8 @@ def create_train_test_splits_1st_way(percent_pos, percent_neg, graph, percent_de
                 graph.add_edge(node1, node2)
             break
 
+    print("Added: {} number of edges to positive test".format(counter2))
+    
     # now create false edges for test and train sets..making sure the edge is not a real edge
     # and not already sampled
     # first for test_set
