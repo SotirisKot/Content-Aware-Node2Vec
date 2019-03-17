@@ -91,12 +91,8 @@ def read_graph(file, get_connected_graph=True, remove_selfloops=True, get_direct
 
 
 def learn_embeddings(walks, train_pos=None, train_neg=None, test_pos=None, test_neg=None, eval_bool=False, embeddings_file=None, checkpoint_file=None):
-    # walks = [map(str, walk) for walk in walks] # this will work on python2 but not in python3
     if not eval_bool:
         print('Creating walk corpus..')
-        # walks = [list(map(str, walk)) for walk in walks]  # this is for python3
-        # pprint(walks)
-        # exit()
         model = Node2Vec(walks=walks, output_file=args.output, walk_length=args.walk_length,
                          embedding_dim=args.dimensions,
                          epochs=args.iter, batch_size=config.batch_size, window_size=args.window_size, neg_sample_num=config.neg_samples)
@@ -427,11 +423,12 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
     print('Creating positive test samples..')
     # shuffle the edges and iterate over them creating the test set
     np.random.shuffle(all_edges)
-    for idx, edge in enumerate(all_edges):
-        if idx % 100 == 0:
-            print('Edge: {}/{}'.format(idx, num_edges))
-            print('Added: ', counter2)
-            print('Not Added: ', counter1)
+    patience = 0
+    for edge in tqdm(all_edges):
+        # if idx % 100 == 0:
+        #     print('Edge: {}/{}'.format(idx, num_edges))
+        #     print('Added: ', counter2)
+        #     print('Not Added: ', counter1)
         node1 = edge[0]
         node2 = edge[1]
         # make sure that the graph remains connected
@@ -455,7 +452,13 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
             if not args.directed:
                 graph.add_edge(node1, node2)
             break
+        elif len(test_edges) == 61849:
+            patience += 1
 
+        if patience == 3:
+            break
+
+    print("Added: {} number of edges to positive test".format(counter2))
     # asserts
     assert test_false_edges.isdisjoint(all_edges_set)
     assert train_false_edges.isdisjoint(all_edges_set)
@@ -487,39 +490,15 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
 
 
 def main(args):
-    nx_G = read_graph(file=args.input, get_connected_graph=False, remove_selfloops=True, get_directed=True)
+    nx_G = read_graph(file=args.input, get_connected_graph=False, remove_selfloops=True, get_directed=False)
     print(nx_G.number_of_nodes(), nx_G.number_of_edges())
     print()
-    # train_pos = pickle.load(open(config.train_pos, 'rb'))
-    # test_pos = pickle.load(open(config.test_pos, 'rb'))
-    # train_neg = pickle.load(open(config.train_neg, 'rb'))
-    # test_neg = pickle.load(open(config.test_neg, 'rb'))
+    train_pos = pickle.load(open(config.train_pos, 'rb'))
+    test_pos = pickle.load(open(config.test_pos, 'rb'))
+    train_neg = pickle.load(open(config.train_neg, 'rb'))
+    test_neg = pickle.load(open(config.test_neg, 'rb'))
 
-    # all_pos = train_pos + test_pos
-    # all_pos = set(all_pos)
-    # #
-    # # phrase_dic = pickle.load(open('data_utilities/part_of/part_of_reversed_dic.p', 'rb'))
-    # # pprint(phrase_dic)
-    # # exit()
-    # # print(phrase_dic['Sigmoid colon'])
-    # # print(phrase_dic['Male pelvis'])
-    # # exit()
-    # json_list = []
-    # for edge in test_neg:
-    #     edge = (edge[1], edge[0])
-    #     if edge in all_pos:
-    #         print("HALOOOOO")
-    #
-    # #     phrase1 = phrase_dic[edge[0]]
-    # #     phrase2 = phrase_dic[edge[1]]
-    # #     json_list.append(OrderedDict([("phrase1: ", str(phrase1)), ("phrase2: ", str(phrase2))]))
-    # #
-    # # with open("json_test_neg_original.json", 'w') as fp:
-    # #     json.dump(json_list, fp)
-    #
-    # exit()
-
-    train_pos, train_neg, test_pos, test_neg = create_train_test_splits_1st_way(0.5, 0.5, nx_G)
+    # train_pos, train_neg, test_pos, test_neg = create_train_test_splits_1st_way(0.5, 0.5, nx_G)
     print('Number of positive training samples: ', len(train_pos))
     print('Number of negative training samples: ', len(train_neg))
     print('Number of positive testing samples: ', len(test_pos))
@@ -528,23 +507,13 @@ def main(args):
         file=config.train_graph,
         get_connected_graph=False,
         remove_selfloops=False)
-    # path = nx.shortest_path(train_graph, source=11035, target=4354)
-    # print(len(path))
-    # rev_phrase_dic = pickle.load(open(config.phrase_dic, 'rb'))
-    # phrase_dic = pickle.load(open('/home/sotiris/PycharmProjects/node2vec_word_embeds/data_utilities/part_of/part_of_phrase_dic.p', 'rb'))
-    # pprint(rev_phrase_dic)
-    # exit()
-    # print(path)
-    # for node in path:
-    #     print(phrase_dic[node])
-    # pprint(rev_phrase_dic)
-    # exit()
+
     print(
         'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
     print('Number of connected components: ', nx.number_connected_components(train_graph))
 
-    print("Created new Dataset..")
-    exit(0)
+    # print("Created new Dataset..")
+    # exit(0)
     if config.train:
         G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
         G.preprocess_transition_probs()

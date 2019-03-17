@@ -25,6 +25,7 @@ import config
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve, auc, roc_auc_score
 
+use_cuda = torch.cuda.is_available()
 sns.set()
 bioclean = lambda t: re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
                             t.replace('"', '').replace('/', '').replace('\\', '').replace("'",
@@ -173,20 +174,18 @@ class Node2Vec:
                                       self.batch_size,
                                       self.window_size)
         elif self.model_type == 'average':
-
             model = models.AverageNode2Vec(self.vocabulary_size,
                                            self.embedding_dim,
                                            self.neg_sample_num,
                                            self.batch_size,
                                            self.window_size)
         else:
-
             model = models.BaselineNode2Vec(self.vocabulary_size,
                                             self.embedding_dim)
 
         print_params(model)
         params = model.parameters()
-        if torch.cuda.is_available():
+        if use_cuda:
             print('GPU available!!')
             model.cuda()
 
@@ -199,56 +198,76 @@ class Node2Vec:
         dataloader = DataLoader(dataset=dataset,
                                 batch_size=self.batch_size,
                                 shuffle=False)
+
         for epoch in range(self.epochs):
             batch_num = 0
+            last_batch_num = -1
             batch_costs = []
+            # if we resume training load the last checkpoint
+            if config.resume_training:
+                if use_cuda:
+                    print('GPU available..will resume training!!')
+                    device = torch.device('cuda')
+                else:
+                    device = torch.device('cpu')
+
+                modelcheckpoint = torch.load(config.checkpoint_to_load, map_location=device)
+                model.load_state_dict(modelcheckpoint['state_dict'])
+                optimizer.load_state_dict(modelcheckpoint['optimizer'])
+                last_batch_num = modelcheckpoint['batch_num']
+            #
             model.train()
             for sample in tqdm(dataloader):
+                # if we resume training--continue from the last batch we stopped
+                if batch_num <= last_batch_num:
+                    batch_num += 1
+                    continue
+                ###
                 phr = sample['center']
                 pos_context = sample['context']
                 neg_v = np.random.choice(self.utils.sample_table, size=(len(phr) * self.neg_sample_num)).tolist()
                 ###
-                if self.model_type is 'rnn':
+                if self.model_type is 'rnn' or self.model_type is 'average':
                     ###
                     phr = [phr2idx(self.utils.phrase_dic[int(phr_id)], self.word2idx) for phr_id in phr]
                     pos_context = [phr2idx(self.utils.phrase_dic[int(item)], self.word2idx) for item in pos_context]
                     neg_v = [phr2idx(self.utils.phrase_dic[int(item)], self.word2idx) for item in neg_v]
                     ###
-                elif self.model_type == 'average':
-                    ###
-                    if torch.cuda.is_available():
-                        phr = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.word2idx)).cuda() for
-                               item in phr]
-                        pos_context = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.word2idx)).cuda()
-                                       for item in pos_context]
-                        neg_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.word2idx)).cuda() for
-                                 item in neg_v]
-                    else:
-                        phr = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.word2idx)) for item in
-                               phr]
-                        pos_context = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.word2idx)) for
-                                       item in pos_context]
-                        neg_v = [torch.LongTensor(phr2idx(self.utils.phrase_dic[int(item)], self.word2idx)) for item in
-                                 neg_v]
-                ###
+                # --------------
                 optimizer.zero_grad()
                 loss = model(phr, pos_context, neg_v)
                 loss.backward()
                 optimizer.step()
                 batch_costs.append(loss.cpu().item())
-                ##
+                # --------------
+
+                # print the average cost every 5000 batches
                 if batch_num % 5000 == 0:
                     print('Batches Average Loss: {}, Batches: {} '.format(
                         sum(batch_costs) / float(len(batch_costs)),
                         batch_num))
                     batch_costs = []
+                ###
+
+                # save the model every 500000 batches
+                if batch_num % 500000 == 0:
+                    print("Saving at {} batches".format(batch_num))
+                    state = {'epoch': epoch + 1,
+                             'state_dict': model.state_dict(),
+                             'optimizer': optimizer.state_dict(),
+                             'word2idx': self.word2idx,
+                             'idx2word': self.utils.idx2word,
+                             'batch_num': batch_num}
+                    save_checkpoint(state,
+                                    filename=self.odir_checkpoint + 'isa_gru_checkpoint_batch_{}'.format(batch_num))
+                ###
                 batch_num += 1
-            ###
+
             # reset the yielder on the dataset class
             if epoch + 1 != self.epochs:
                 dataset.reset_generator()
-            ###
 
+            # save the model on each epoch
             state = {'epoch': epoch + 1,
                      'state_dict': model.state_dict(),
                      'optimizer': optimizer.state_dict(),
@@ -256,9 +275,10 @@ class Node2Vec:
                      'idx2word': self.utils.idx2word}
 
             save_checkpoint(state, filename=self.odir_checkpoint + config.checkpoint_name.format(epoch + 1))
-
             # TODO do something better here
             config.checkpoint_name = config.checkpoint_name.format(epoch + 1)
+
+        # training has finished..save the word embeddings
         print("Optimization Finished!")
         self.wv = model.save_embeddings(file_name=self.odir_embeddings + self.output_file,
                                         idx2word=self.utils.idx2word,
@@ -267,7 +287,7 @@ class Node2Vec:
     def eval(self, train_pos, train_neg, test_pos, test_neg, embeddings_file=None, checkpoint_file=None):
         phrase_dic = clean_dictionary(pickle.load(open(config.phrase_dic, 'rb')))
         if self.model_type == 'rnn':
-            if torch.cuda.is_available():
+            if use_cuda:
                 print('GPU available!!')
                 device = torch.device('cuda')
             else:
@@ -283,7 +303,7 @@ class Node2Vec:
                                       self.window_size)
             print_params(model)
             #
-            if torch.cuda.is_available():
+            if use_cuda:
                 print('GPU available!!')
                 model.cuda()
             #
@@ -374,7 +394,7 @@ class Node2Vec:
                     phrase = phrase_dic[phr_id]
                     phrase = ' '.join(phrase)
                     ###
-                    if torch.cuda.is_available():
+                    if use_cuda:
                         node_embeddings[phr_id] = phrase_emb[idx].cpu().numpy()
                         node_embeddings_phrases[phrase] = phrase_emb[idx].cpu().numpy()
                         e = ' '.join(map(lambda x: str(x), phrase_emb[idx].cpu().numpy()))
@@ -413,7 +433,7 @@ def create_pooling_weights_for_batch(idx_u, phrase_dic, batch):
         i = 0
         for key in keys:
             if phrase[key] in scores.keys():
-                key_phr = str(i)+"-"+phrase[key]
+                key_phr = str(i) + "-" + phrase[key]
                 scores[key_phr] = float(freqs[key]) / sum_val
                 i += 1
             else:
@@ -432,7 +452,7 @@ def create_attention_weights_for_batch(idx_u, phrase_dic, batch):
         i = 0
         for idx_word, word in enumerate(phrase):
             if word in scores.keys():
-                double_phr = str(i)+"-"+word
+                double_phr = str(i) + "-" + word
                 scores[double_phr] = attn_phrase[idx_word]
             else:
                 scores[word] = attn_phrase[idx_word]
@@ -495,7 +515,8 @@ def plot_attention(json_list, filename):
         html_content += '<li>'
         for word in words.split():
             try:
-                html_content += '<span style= "background-color:rgba(255, 0, 0, {0:.1f});">{1} </span>'.format(attention[word], word)
+                html_content += '<span style= "background-color:rgba(255, 0, 0, {0:.1f});">{1} </span>'.format(
+                    attention[word], word)
             except KeyError:
                 html_content += '<span>{} </span>'.format(word)
         html_content += '<br/>'
@@ -508,4 +529,3 @@ def plot_attention(json_list, filename):
     with open(path, 'w') as f:
         f.write(html_content)
     webbrowser.open(url)
-

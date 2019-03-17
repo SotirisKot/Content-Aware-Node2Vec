@@ -4,9 +4,14 @@ import re
 import json
 from pprint import pprint
 
-bioclean = lambda t: ' '.join(re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
-                                     t.replace('"', '').replace('/', '').replace('\\', '').replace("'",
-                                                                                                   '').strip().lower()).split()).strip()
+
+bioclean = lambda t: re.sub('[.,?;*!%^&_+():-\[\]{}]', '', t.replace('"', '').replace('/', ' ').replace('\\', '').replace("'", '').strip().lower()).split()
+
+
+def clean_dictionary(phrase_dic):
+    for nodeid, phrase in phrase_dic.items():
+        phrase_dic[nodeid] = tokenize(phrase)
+    return phrase_dic
 
 
 def tokenize(x):
@@ -74,19 +79,24 @@ if __name__ == '__main__':
     # print(len(phrases))
     # exit()
     #phrase_vocab, phrase_dic, reversed_dictionary = build_phrase_dic(instances)
-    phrase_dic = pickle.load(open('data_utilities/isa/isa_phrase_dic.p', 'rb'))
+    phrase_dic = clean_dictionary(pickle.load(open('data_utilities/isa/isa_reversed_dic.p', 'rb')))
+    for id, phr in phrase_dic.items():
+        if '-' in phr:
+            print(id, phr)
+    exit()
     # pprint(phrase_dic)
     # exit()
     # print(phrase_dic['Pleural cupula'])
     # print(phrase_dic['DNA molecule'])
     # exit()
     # print(reversed_dictionary[4451])
-    # with open(os.path.join(odir, '{}.edgelist'.format('dummy_test_3')), 'w') as data_file:
-    #     for instance in instances:
-    #         # fromidx = str(reversed_dictionary[instance[0]])
-    #         # toidx = str(reversed_dictionary[instance[1]])
-    #         data_file.write(instance[0] +"----------"+ instance[1] + '\n')
-    # print(len(instances))
-    # print(len(phrase_vocab))
-    # print(len(reversed_dictionary))
+    with open(os.path.join(odir, '{}.edgelist'.format('isa_cleaned_dummy_test_3')), 'w') as data_file:
+        for instance in instances:
+            print(instance)
+            exit()
+            fromidx = str(phrase_dic[instance[0]])
+            toidx = str(phrase_dic[instance[1]])
+            data_file.write(toidx +"----------"+ fromidx + '\n')
+    print(len(instances))
+    exit()
     build_relation_edgelist('isa_directed', instances, phrase_dic)

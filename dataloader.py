@@ -3,6 +3,8 @@ import torch
 from torch.utils.data import Dataset
 from torch.autograd import Variable
 import config
+import os
+import pickle
 
 
 class Node2VecDataset(Dataset):
@@ -11,9 +13,19 @@ class Node2VecDataset(Dataset):
         self.neg_samples = neg_samples
         self.span = 2 * self.utils.window_size
         self.data_gen = self._data_generator()
-        print('Loading data')
-        self.data = self.utils.walks
-        print('Done loading data')
+
+        if config.resume_training:
+            self.data = pickle.load(open(os.path.join(config.output_dir, 'isa_walks'), 'rb'))
+        else:
+            print('Loading data')
+            self.data = self.utils.walks
+            print('Done loading data')
+
+        if config.write_data:
+            print('Writing data in disk if we need to resume training...')
+            with open("{}.p".format(os.path.join(config.output_dir, 'isa_walks')), 'wb') as dump_file:
+                pickle.dump(self.data, dump_file)
+            print('Done writing data...')
 
     def __len__(self):
         """Denotes the total number of samples"""

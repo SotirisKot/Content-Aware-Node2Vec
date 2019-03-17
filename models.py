@@ -8,6 +8,7 @@ import config
 import os
 import pickle
 import logging
+import time
 
 
 ''' SEEDS '''
@@ -128,8 +129,8 @@ Average the words in a phrase and use it as an encoding
 class AverageNode2Vec(nn.Module):
     def __init__(self, vocab_size, embedding_dim, neg_sample_num, batch_size, window_size):
         super(AverageNode2Vec, self).__init__()
-        self.u_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
-        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True)
+        self.u_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True, padding_idx=0)
+        self.v_embeddings = nn.Embedding(vocab_size, embedding_dim, sparse=True, padding_idx=0)
         self.embedding_dim = embedding_dim
         self.neg_sample_num = neg_sample_num
         self.batch_size = batch_size
@@ -139,57 +140,73 @@ class AverageNode2Vec(nn.Module):
     def init_emb(self):
         initrange = 0.5 / self.embedding_dim
         self.u_embeddings.weight.data.uniform_(-initrange, initrange)
+        self.u_embeddings.weight.data[0] = 0
         self.v_embeddings.weight.data.uniform_(-0, 0)
 
-    def get_average_embedings(self, pos_u, pos_v, neg_v):
-        # TODO fix the embedding layer and try to vectorize the operations
-        # NOTE
+    def fix_input(self, phr_inds=None, pos_inds=None, neg_inds=None):
+        seq_lengths_phr = torch.LongTensor([len(seq) for seq in phr_inds])
+        seq_lengths_pos = torch.LongTensor([len(seq) for seq in pos_inds])
+        seq_lengths_neg = torch.LongTensor([len(seq) for seq in neg_inds])
 
-        # if torch.cuda.is_available():
-        #     pos_u = [torch.LongTensor(item).cuda() for item in pos_u]
-        #     pos_v = [torch.LongTensor(item).cuda() for item in pos_v]
-        #     neg_v = [torch.LongTensor(item).cuda() for item in neg_v]
-        # else:
-        #     pos_u = [torch.LongTensor(item) for item in pos_u]
-        #     pos_v = [torch.LongTensor(item) for item in pos_v]
-        #     neg_v = [torch.LongTensor(item) for item in neg_v]
-        #
-        # embed_u = [self.u_embeddings(pos) for pos in pos_u]
-        # embed_v = [self.v_embeddings(pos) for pos in pos_v]
-        # neg_embed_v = [self.v_embeddings(neg) for neg in neg_v]
-        # print(pos_u_average)
+        seq_phr, phr_lengths = self.pad_sequences(phr_inds, seq_lengths_phr)
+        seq_pos, pos_lengths = self.pad_sequences(pos_inds, seq_lengths_pos)
+        seq_neg, neg_lengths = self.pad_sequences(neg_inds, seq_lengths_neg)
 
-        pos_u_average = []
-        for phrase_idxs in pos_u:
-            embed_u = self.u_embeddings(phrase_idxs)
-            embed_add = torch.sum(embed_u, dim=0)
-            pos_u_average.append(embed_add / float(len(phrase_idxs)))
-        pos_u_average = torch.stack(pos_u_average)
+        if torch.cuda.is_available():
+            return seq_phr.cuda(), \
+                   phr_lengths, \
+                   seq_pos.cuda(), \
+                   pos_lengths, \
+                   seq_neg.cuda(), \
+                   neg_lengths
+        else:
+            return seq_phr, \
+                   phr_lengths, \
+                   seq_pos, \
+                   pos_lengths, \
+                   seq_neg, \
+                   neg_lengths
 
-        #TODO check this again it seems correct
-        # embed_v = [self.v_embeddings(pos).mean(0) for pos in pos_v]
-        # embed_v = torch.stack(embed_v)
-        # print(embed_v)
-        # print(embed_v.size())
-        pos_v_average = []
-        for phrase_idxs in pos_v:
-            embed_v = self.v_embeddings(phrase_idxs)
-            embed_add = torch.sum(embed_v, dim=0)
-            pos_v_average.append((embed_add / float(len(phrase_idxs))))
-        pos_v_average = torch.stack(pos_v_average)
+    def pad_sequences(self, vectorized_seqs, seq_lengths):
+        seq_tensor = torch.zeros((len(vectorized_seqs), seq_lengths.max())).long()
+        for idx, (seq, seq_len) in enumerate(zip(vectorized_seqs, seq_lengths)):
+            seq_tensor[idx, :seq_len] = torch.LongTensor(seq)
 
-        neg_v_average = []
-        for phrase_idxs in neg_v:
-            neg_embed_v = self.v_embeddings(phrase_idxs)
-            embed_add = torch.sum(neg_embed_v, dim=0)
-            neg_v_average.append(embed_add / float(len(phrase_idxs)))
-        neg_v_average = torch.stack(neg_v_average)
-        neg_v_average = neg_v_average.view(pos_u_average.shape[0], self.neg_sample_num, self.embedding_dim)
+        return seq_tensor, seq_lengths
 
-        return pos_u_average, pos_v_average, neg_v_average
+    def get_words_embeds(self, phr, pos, neg):
+        phr = self.u_embeddings(phr)
+        pos = self.v_embeddings(pos)
+        neg = self.v_embeddings(neg)
+        return phr, pos, neg
+
+    def get_average_embedings(self, pos_u, pos_u_lens, pos_v, pos_v_lens, neg_v, neg_v_lens):
+
+        pos_u_lens = pos_u_lens.float().unsqueeze(1)
+        pos_v_lens = pos_v_lens.float().unsqueeze(1)
+        neg_v_lens = neg_v_lens.float().unsqueeze(1)
+
+        # for pos_u
+        emb_u = torch.sum(pos_u, 1).squeeze(0)
+        emb_u = emb_u / pos_u_lens.expand_as(emb_u)
+
+        # for pos_v
+        emb_v = torch.sum(pos_v, 1).squeeze(0)
+        emb_v = emb_v / pos_v_lens.expand_as(emb_v)
+
+        # for neg_v
+        neg_v = torch.sum(neg_v, 1).squeeze(0)
+        neg_v = neg_v / neg_v_lens.expand_as(neg_v)
+        neg_v = neg_v.view(emb_u.shape[0], -1, self.embedding_dim)
+
+        return emb_u, emb_v, neg_v
 
     def forward(self, pos_u, pos_v, neg_v):
-        embed_u, embed_v, neg_embed_v = self.get_average_embedings(pos_u, pos_v, neg_v)
+
+        pos_u, pos_u_lens, pos_v, pos_v_lens, neg_v, neg_v_lens = self.fix_input(pos_u, pos_v, neg_v)
+        pos_u, pos_v, neg_v = self.get_words_embeds(pos_u, pos_v, neg_v)
+        embed_u, embed_v, neg_embed_v = self.get_average_embedings(pos_u, pos_u_lens, pos_v, pos_v_lens, neg_v, neg_v_lens)
+
         score = torch.mul(embed_u, embed_v)
         score = torch.sum(score, dim=1)
         log_target = F.logsigmoid(score)

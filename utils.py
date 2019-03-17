@@ -24,10 +24,7 @@ class Utils(object):
     def build_word_vocab(self, walks):
         data_vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence
         word2idx = {}
-        #TODO remove pad if model is baseline or average node2vec ---------- DONE
-
-        #TODO the vocabulary in the baseline model is created differently-must implement it
-        if config.model == 'rnn':
+        if config.model == 'rnn' or config.model == 'average':
             word2idx['PAD'] = 0
         word2idx['UNKN'] = len(word2idx)
         for walk in tqdm(walks):
@@ -66,7 +63,7 @@ class Utils(object):
         return np.array(sample_table)
 
 
-bioclean = lambda t: re.sub('[.,?;*!%^&_+():-\[\]{}]', '', t.replace('"', '').replace('/', '').replace('\\', '').replace("'", '').strip().lower()).split()
+bioclean = lambda t: re.sub('[.,?;*!%^&_+():-\[\]{}]', '', t.replace('"', '').replace('/', ' ').replace('\\', '').replace("'", '').strip().lower()).split()
 
 
 def get_index(w, vocab):
