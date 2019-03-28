@@ -154,11 +154,11 @@ class AverageNode2Vec(nn.Module):
 
         if torch.cuda.is_available():
             return seq_phr.cuda(), \
-                   phr_lengths, \
+                   phr_lengths.cuda(), \
                    seq_pos.cuda(), \
-                   pos_lengths, \
+                   pos_lengths.cuda(), \
                    seq_neg.cuda(), \
-                   neg_lengths
+                   neg_lengths.cuda()
         else:
             return seq_phr, \
                    phr_lengths, \
@@ -369,9 +369,10 @@ class GRUEncoder(nn.Module):
 
     def encode(self, inp, seq_lens=None, perm_idx=None):
         if self.gru_encoder == 1:
-
+            # it is a uni-directional gru
             # Handling padding in Recurrent Networks
             gru_input = pack_padded_sequence(inp, seq_lens.data.cpu().numpy(), batch_first=True)
+
             hn = self.the_rnn(gru_input)[1].squeeze(0)  # get the last hidden states for the batch..we must unsort it
 
             # unsort hidden and return last timesteps
