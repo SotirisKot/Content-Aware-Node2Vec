@@ -1,2 +1,2 @@
-# thesis
-Code for my thesis in the Athens University of Economics and Business
+# Project
+Code for a project in Athens University of Economics and Business
