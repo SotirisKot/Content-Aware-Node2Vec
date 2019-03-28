@@ -22,13 +22,14 @@ from collections import OrderedDict
 import logging
 import webbrowser
 import config
+import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_curve, auc, roc_auc_score
+from sklearn.metrics import roc_curve, auc, roc_auc_score, average_precision_score, precision_recall_curve
 
 use_cuda = torch.cuda.is_available()
 sns.set()
 bioclean = lambda t: re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
-                            t.replace('"', '').replace('/', '').replace('\\', '').replace("'",
+                            t.replace('"', '').replace('/', ' ').replace('\\', '').replace("'",
                                                                                           '').strip().lower()).split()
 
 
@@ -118,8 +119,6 @@ def get_edge_embeddings(edge_list, node_embeddings, model_type, phrase_dic):
 
 def get_average_embedding(phrase, node_embeddings):
     length = len(phrase)
-    # TODO check if i have to remove split
-    # phrase = phrase.split()
     for idx, word in enumerate(phrase):
         if idx == 0:
             sum = node_embeddings[word]
@@ -148,7 +147,7 @@ class Node2Vec:
                  window_size=10,
                  neg_sample_num=5):
         self.utils = Utils(walks, window_size, walk_length)
-        if walks is not None:
+        if walks is not None or config.resume_training:
             self.vocabulary_size = self.utils.vocabulary_size
             self.node2phr = self.utils.phrase_dic
             self.word2idx = self.utils.word2idx
@@ -201,8 +200,8 @@ class Node2Vec:
 
         for epoch in range(self.epochs):
             batch_num = 0
-            last_batch_num = -1
             batch_costs = []
+            last_batch_num = -1
             # if we resume training load the last checkpoint
             if config.resume_training:
                 if use_cuda:
@@ -211,13 +210,17 @@ class Node2Vec:
                 else:
                     device = torch.device('cpu')
 
-                modelcheckpoint = torch.load(config.checkpoint_to_load, map_location=device)
+                modelcheckpoint = torch.load(os.path.join(config.checkpoint_dir, config.checkpoint_to_load), map_location=device)
                 model.load_state_dict(modelcheckpoint['state_dict'])
                 optimizer.load_state_dict(modelcheckpoint['optimizer'])
                 last_batch_num = modelcheckpoint['batch_num']
+                self.word2idx = modelcheckpoint['word2idx']
+                # last_loss = modelcheckpoint['loss']
+                print("We stopped in {} batch".format(last_batch_num))
             #
             model.train()
-            for sample in tqdm(dataloader):
+            iterator = tqdm(dataloader)
+            for sample in iterator:
                 # if we resume training--continue from the last batch we stopped
                 if batch_num <= last_batch_num:
                     batch_num += 1
@@ -228,11 +231,11 @@ class Node2Vec:
                 neg_v = np.random.choice(self.utils.sample_table, size=(len(phr) * self.neg_sample_num)).tolist()
                 ###
                 if self.model_type is 'rnn' or self.model_type is 'average':
-                    ###
+
                     phr = [phr2idx(self.utils.phrase_dic[int(phr_id)], self.word2idx) for phr_id in phr]
                     pos_context = [phr2idx(self.utils.phrase_dic[int(item)], self.word2idx) for item in pos_context]
                     neg_v = [phr2idx(self.utils.phrase_dic[int(item)], self.word2idx) for item in neg_v]
-                    ###
+
                 # --------------
                 optimizer.zero_grad()
                 loss = model(phr, pos_context, neg_v)
@@ -247,19 +250,19 @@ class Node2Vec:
                         sum(batch_costs) / float(len(batch_costs)),
                         batch_num))
                     batch_costs = []
-                ###
 
                 # save the model every 500000 batches
-                if batch_num % 500000 == 0:
+                if batch_num % 300000 == 0:
                     print("Saving at {} batches".format(batch_num))
                     state = {'epoch': epoch + 1,
                              'state_dict': model.state_dict(),
                              'optimizer': optimizer.state_dict(),
                              'word2idx': self.word2idx,
                              'idx2word': self.utils.idx2word,
-                             'batch_num': batch_num}
+                             'batch_num': batch_num,
+                             'loss': loss.cpu().item()}
                     save_checkpoint(state,
-                                    filename=self.odir_checkpoint + 'isa_gru_checkpoint_batch_{}'.format(batch_num))
+                                    filename=self.odir_checkpoint + 'isa_gru_checkpoint_batch_{}.pth.tar'.format(batch_num))
                 ###
                 batch_num += 1
 
@@ -332,13 +335,13 @@ class Node2Vec:
         test_pos_edge_embs = get_edge_embeddings(test_pos, node_embeddings, self.model_type, phrase_dic)
         test_neg_edge_embs = get_edge_embeddings(test_neg, node_embeddings, self.model_type, phrase_dic)
         test_set = np.concatenate([test_pos_edge_embs, test_neg_edge_embs])
-        # test_set_phrases = test_pos + test_neg
+        test_set_phrases = np.concatenate([test_pos, test_neg])
 
         # labels: 1-> link exists, 0-> false edge
         test_labels = np.zeros(len(test_set))
         test_labels[:len(test_pos_edge_embs)] = 1
-        # test_labels_phrases = np.zeros(len(test_set_phrases))
-        # test_labels_phrases[:len(test_pos)] = 1
+        test_labels_phrases = np.zeros(len(test_set_phrases))
+        test_labels_phrases[:len(test_pos)] = 1
 
         # train the classifier and evaluate in the test set
 
@@ -352,21 +355,49 @@ class Node2Vec:
         idx_list = [i for i in range(len(test_labels))]
         shuffle(idx_list)
         test_set = test_set[idx_list]
-        # test_set_phrases = test_set_phrases[idx_list]
+        test_set_phrases = test_set_phrases[idx_list]
         test_labels = test_labels[idx_list]
-        # test_labels_phrases = test_labels_phrases[idx_list]
+        test_labels_phrases = test_labels_phrases[idx_list]
 
         classifier = LogisticRegression()
         classifier.fit(train_set, train_labels)
 
         # evaluate
-        test_preds = classifier.predict_proba(test_set)[:, 1]
-
-        false_positive_rate, true_positive_rate, thresholds = roc_curve(test_labels, test_preds)
+        test_preds = classifier.predict_proba(test_set)
+        create_confusion_matrix(test_preds, phrase_dic, test_labels_phrases, test_set_phrases)
+        false_positive_rate, true_positive_rate, thresholds = roc_curve(test_labels, test_preds[:, 1])
+        average_precision = average_precision_score(test_labels, test_preds[:, 1])
         test_auc = auc(false_positive_rate, true_positive_rate)
-        test_roc = roc_auc_score(test_labels, test_preds)
+        test_roc = roc_auc_score(test_labels, test_preds[:, 1])
         print('node2vec Test ROC score: ', str(test_roc))
         print('node2vec Test AUC score: ', str(test_auc))
+        print('node2vec Test AP score: ', str(average_precision))
+        # precision, recall, _ = precision_recall_curve(test_labels, test_preds[:, 1])
+        #
+        # plt.step(recall, precision, color='b', alpha=0.2,
+        #          where='post')
+        # plt.fill_between(recall, precision, step='post', alpha=0.2,
+        #                  color='b')
+        #
+        # plt.xlabel('Recall')
+        # plt.ylabel('Precision')
+        # plt.ylim([0.0, 1.05])
+        # plt.xlim([0.0, 1.0])
+        # plt.title('2-class Precision-Recall curve: AP={0:0.2f}'.format(
+        #     average_precision))
+        # plt.show()
+        # plt.figure(figsize=(8, 8))
+        # plt.xlim([-0.01, 1.00])
+        # plt.ylim([-0.01, 1.01])
+        # plt.plot(false_positive_rate, true_positive_rate, lw=1, label='{} curve (AUC = {:0.2f})'.format('RF', test_auc))
+        #
+        # plt.xlabel('False Positive Rate', fontsize=16)
+        # plt.ylabel('True Positive Rate', fontsize=16)
+        # plt.title('ROC curve', fontsize=16)
+        # plt.legend(loc='lower right', fontsize=13)
+        # plt.plot([0, 1], [0, 1], color='navy', lw=1, linestyle='--')
+        # plt.axes().set_aspect('equal')
+        # plt.show()
 
     def create_node_embeddings(self, model, phrase_dic, word2idx):
         with torch.no_grad():
@@ -378,6 +409,7 @@ class Node2Vec:
             json_list_ultra = []
             keys = list(phrase_dic.keys())
             for phridx in tqdm(range(0, len(keys), self.batch_size)):
+
                 batch = keys[phridx:phridx + self.batch_size]
                 phrases = [phrase_dic[key] for key in batch]
                 phr = [phr2idx(phrase, word2idx) for phrase in phrases]
@@ -385,9 +417,9 @@ class Node2Vec:
 
                 ###  create weights for visualizing the words that are getting pooled more often
                 # json_list = create_pooling_weights_for_batch(idx_u, phrase_dic, batch)
-                json_list = create_attention_weights_for_batch(idx_u, phrase_dic, batch)
-                for triplet in json_list:
-                    json_list_ultra.append(triplet)
+                # json_list = create_attention_weights_for_batch(idx_u, phrase_dic, batch)
+                # for triplet in json_list:
+                #     json_list_ultra.append(triplet)
                 ###
 
                 for idx, phr_id in enumerate(batch):
@@ -412,7 +444,7 @@ class Node2Vec:
             #     json.dump(json_list_ultra, fp)
 
             #### create html file with the heatmap of each phrase
-            plot_attention(json_list_ultra, 'attention_part_of.html')
+            plot_attention(json_list_ultra, 'max_pool_isa.html')
             ####
             return node_embeddings
 

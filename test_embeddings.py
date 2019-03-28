@@ -10,12 +10,12 @@ from tqdm import tqdm
 from pprint import pprint
 import codecs
 import logging
-#my_seed = 1997
 import random
 import torch
 import models
 import config
-#random.seed(my_seed)
+my_seed = 1997
+random.seed(my_seed)
 
 handler = None
 output_dir = '/home/sotiris/Documents/logger/'
@@ -169,9 +169,9 @@ def get_dictionary(reversed_dic, all_embeddings_dic):
 
 def load_dictionaries(words=False):
     if words:
-        all_embeddings_words = load_embeddings('/home/sotiris/Downloads/rnn_best_model/part_of_rnn_residual_words_link_predict.emb')
+        all_embeddings_words = load_embeddings('/home/sotiris/Downloads/isa_gru_normal_lr/isa_gru_words_link_predict.emb')
     else:
-        all_embeddings_words = pickle.load(open('/home/sotiris/Downloads/rnn_self_attention/node_embeddings_phrases.p', 'rb'))
+        all_embeddings_words = pickle.load(open('/home/sotiris/Downloads/isa_gru_normal_lr/easy/node_embeddings_phrases.p', 'rb'))
 
     return all_embeddings_words
 
@@ -232,7 +232,7 @@ def create_json_words(all_embeddings_words):
     the_keys = the_keys[2:]
     random.shuffle(the_keys)
     json_list = []
-    for phrase_target in tqdm(the_keys):
+    for phrase_target in tqdm(the_keys[:100]):
         all_similarities = []
         target_embed = all_embeddings_words[phrase_target]
         for phrase in the_keys:
@@ -266,7 +266,7 @@ def create_json_phrases(all_embeddings_phr, stress=None):
     the_keys = list(all_embeddings_phr.keys())
     random.shuffle(the_keys)
     json_list = []
-    for phrase_target in tqdm(the_keys[2000:2500]):
+    for phrase_target in tqdm(the_keys[:100]):
         all_similarities = []
         target_embed = all_embeddings_phr[phrase_target]
         for phrase in the_keys:
@@ -355,10 +355,16 @@ def encode_one_unknown_sentence(all_embs, sent):
 
 
 all_embeddings = load_dictionaries(words=True)
+# phrase_dic = (pickle.load(open('/home/sotiris/PycharmProjects/node2vec_word_embeds/data_utilities/isa/isa_reversed_dic.p', 'rb')))
+# for id, phr in phrase_dic.items():
+#     if phr == 'antiemetic agent':
+#         print(id, phr)
+#         exit(0)
+
 # encode_one_unknown_sentence(all_embeddings, 'white hair')
-# find_most_least_sim("wall of left seminal vesicle", all_embeddings=all_embeddings, word=False)
+find_most_least_sim("foot", all_embeddings=all_embeddings, word=True)
 # stress_test(all_embeddings)
-create_json_words(all_embeddings)
+# create_json_words(all_embeddings)
 # create_json_phrases(all_embeddings, stress=1)
 # nums = [i for i in range(0, 1915)]
 # num = np.random.choice(nums, size=20).tolist()

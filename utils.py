@@ -4,6 +4,7 @@ import re
 from tqdm import tqdm
 import numpy as np
 import config
+import os
 from pprint import pprint
 np.random.seed(12345)
 
@@ -13,7 +14,12 @@ class Utils(object):
         self.phrase_dic = clean_dictionary(pickle.load(open(config.phrase_dic, 'rb')))
         self.walk_length = walk_length
         self.window_size = window_size
-        self.walks = walks
+        if config.resume_training:
+            print("Loading previous walks to continue training...")
+            self.walks = pickle.load(open(os.path.join(config.output_dir, 'isa_walks.p'), 'rb'))
+        else:
+            self.walks = walks
+
         if self.walks is not None:
             data, self.frequencies, self.word2idx, self.idx2word = self.build_dataset(self.walks)
             self.vocabulary_size = len(self.word2idx)

@@ -14,12 +14,9 @@ class Node2VecDataset(Dataset):
         self.span = 2 * self.utils.window_size
         self.data_gen = self._data_generator()
 
-        if config.resume_training:
-            self.data = pickle.load(open(os.path.join(config.output_dir, 'isa_walks'), 'rb'))
-        else:
-            print('Loading data')
-            self.data = self.utils.walks
-            print('Done loading data')
+        print('Loading data')
+        self.data = self.utils.walks
+        print('Done loading data')
 
         if config.write_data:
             print('Writing data in disk if we need to resume training...')

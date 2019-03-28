@@ -491,8 +491,30 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
 
 def main(args):
     nx_G = read_graph(file=args.input, get_connected_graph=False, remove_selfloops=True, get_directed=False)
-    print(nx_G.number_of_nodes(), nx_G.number_of_edges())
-    print()
+    # children = list(nx_G.successors(18060))
+    # print(len(children))
+    # print(children)
+    # phrase_dic = pickle.load(open(config.phrase_dic, 'rb'))
+    # max_len = 0
+    # phr_str = None
+    # total_len = 0
+    # for id, phrase in phrase_dic.items():
+    #     phr = phrase.split()
+    #     total_len += len(phr)
+    #     if len(phr) > max_len:
+    #         phr_str = phr
+    #         max_len = len(phr)
+    # avg =float(total_len) / float(len(phrase_dic))
+    # print('The average is: ', avg)
+    #
+    # print('The maximun length of a sentence is: ', max_len)
+    # print('The phrase', phr_str)
+    # exit(0)
+    # for child in children:
+    #     print(phrase_dic[child])
+    # exit(0)
+    # print(nx_G.number_of_nodes(), nx_G.number_of_edges())
+    # print()
     train_pos = pickle.load(open(config.train_pos, 'rb'))
     test_pos = pickle.load(open(config.test_pos, 'rb'))
     train_neg = pickle.load(open(config.train_neg, 'rb'))
@@ -515,11 +537,14 @@ def main(args):
     # print("Created new Dataset..")
     # exit(0)
     if config.train:
-        G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
-        G.preprocess_transition_probs()
-        walks = G.simulate_walks(args.num_walks, args.walk_length)
-        # learn the embeddings
-        _ = learn_embeddings(walks)
+        if config.resume_training:
+            _ = learn_embeddings(walks=None)
+        else:
+            G = node2vec.Graph(train_graph, args.directed, args.p, args.q)
+            G.preprocess_transition_probs()
+            walks = G.simulate_walks(args.num_walks, args.walk_length)
+            # learn the embeddings
+            _ = learn_embeddings(walks)
 
     embeddings_file = None
     checkpoint_file = None

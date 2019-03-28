@@ -1,9 +1,9 @@
-lr = 0.0001
+lr = 0.0001 # for isa..for part_of -> 0.0001 # for average 0.001
 batch_size = 128  # don't set batch_size = 1
 neg_samples = 2
 dimensions = 30
 walk_length = 40
-num_walks = 10
+num_walks = 5
 window_size = 5
 p = 1
 q = 1
@@ -17,8 +17,8 @@ max_pad = False  # you can remove the zero-padding during max pooling by setting
 hidden_size = 30
 gru_encoder = 2  # first encoder: last timesteps, second encoder: residual + max pooling, third encoder: residual + self attention
 model = 'rnn'  # models: {'baseline' , 'average', 'rnn'}
-train = True
-evaluate = False
+train = False
+evaluate = True
 resume_training = False
 write_data = False
 
@@ -53,19 +53,19 @@ write_data = False
 
 # Laptop
 
-input_edgelist = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/relation_instances_edgelists/part_of_directed.edgelist'
-output_file = 'part_of_rnn_residual_words_link_predict.emb'
-train_pos = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/part_of_hard_splits/part_of_train_pos.p'
-train_neg = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/part_of_hard_splits/part_of_train_neg.p'
-test_pos = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/part_of_hard_splits/part_of_test_pos.p'
-test_neg = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/part_of_hard_splits/part_of_test_neg.p'
-train_graph = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/part_of_hard_splits/part_of_train_graph_undirected.edgelist'
-phrase_dic = '/home/sotiris/PycharmProjects/node2vec_word_embeds/data_utilities/part_of/part_of_reversed_dic.p'
-# checkpoint_dir = '/home/sotiris/PycharmProjects/checkpoints/'
-checkpoint_dir = '/home/sotiris/Downloads/rnn_best_model/'
-embeddings_dir = '/home/sotiris/Downloads/'
-checkpoint_name = 'part_of_rnn_residual_checkpoint_epoch_1.pth.tar'
-output_dir = '/home/sotiris/checkpoints/'
+# input_edgelist = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/relation_instances_edgelists/part_of_directed.edgelist'
+# output_file = 'part_of_rnn_residual_words_link_predict.emb'
+# train_pos = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/part_of_hard_splits/part_of_train_pos.p'
+# train_neg = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/part_of_hard_splits/part_of_train_neg.p'
+# test_pos = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/part_of_hard_splits/part_of_test_pos.p'
+# test_neg = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/part_of_hard_splits/part_of_test_neg.p'
+# train_graph = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/part_of_hard_splits/part_of_train_graph_undirected.edgelist'
+# phrase_dic = '/home/sotiris/PycharmProjects/node2vec_word_embeds/data_utilities/part_of/part_of_reversed_dic.p'
+# # checkpoint_dir = '/home/sotiris/PycharmProjects/checkpoints/'
+# checkpoint_dir = '/home/sotiris/Downloads/rnn_best_model/'
+# embeddings_dir = '/home/sotiris/Downloads/'
+# checkpoint_name = 'part_of_rnn_residual_checkpoint_epoch_1.pth.tar'
+# output_dir = '/home/sotiris/checkpoints/'
 
 # input_edgelist = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/relation_instances_edgelists/part_of_directed.edgelist'
 # output_file = 'part_of_rnn_residual_words_link_predict.emb'
@@ -81,19 +81,19 @@ output_dir = '/home/sotiris/checkpoints/'
 # checkpoint_name = 'part_of_rnn_residual_checkpoint_epoch_1.pth.tar'
 # output_dir = '/home/sotiris/checkpoints/'
 
-# input_edgelist = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/relation_instances_edgelists/isa_directed.edgelist'
-# output_file = 'isa_rnn_residual_words_link_predict.emb'
-# train_pos = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/isa_hard_splits/isa_train_pos.p'
-# train_neg = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/isa_hard_splits/isa_train_neg.p'
-# test_pos = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/isa_hard_splits/isa_test_pos.p'
-# test_neg = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/isa_hard_splits/isa_test_neg.p'
-# train_graph = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/isa_hard_splits/isa_train_graph_undirected.edgelist'
-# phrase_dic = '/home/sotiris/PycharmProjects/node2vec_word_embeds/data_utilities/isa/isa_reversed_dic.p'
-# # checkpoint_dir = '/home/sotiris/PycharmProjects/checkpoints/'
-# checkpoint_dir = '/home/sotiris/Downloads/isa_gru/'
-# embeddings_dir = '/home/sotiris/Downloads/'
-# checkpoint_name = 'isa_gru_checkpoint_epoch_1.pth.tar'
-# output_dir = '/home/sotiris/checkpoints/'
+input_edgelist = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/relation_instances_edgelists/isa_directed.edgelist'
+output_file = 'isa_rnn_residual_words_link_predict.emb'
+train_pos = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/isa_hard_splits/isa_train_pos.p'
+train_neg = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/isa_hard_splits/isa_train_neg.p'
+test_pos = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/isa_hard_splits/isa_test_pos.p'
+test_neg = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/isa_hard_splits/isa_test_neg.p'
+train_graph = '/home/sotiris/PycharmProjects/node2vec_word_embeds/datasets/isa_hard_splits/isa_train_graph_undirected.edgelist'
+phrase_dic = '/home/sotiris/PycharmProjects/node2vec_word_embeds/data_utilities/isa/isa_reversed_dic.p'
+# checkpoint_dir = '/home/sotiris/PycharmProjects/checkpoints/'
+checkpoint_dir = '/home/sotiris/Downloads/isa_gru_normal_lr/'
+embeddings_dir = '/home/sotiris/Downloads/'
+checkpoint_name = 'isa_gru_checkpoint_batch_1200000.pth.tar'
+output_dir = '/home/sotiris/checkpoints/'
 
 # Colab
 
@@ -126,3 +126,11 @@ output_dir = '/home/sotiris/checkpoints/'
 # checkpoint_name = 'isa_gru_checkpoint_epoch_{}.pth.tar'
 # checkpoint_to_load = 'isa_gru_checkpoint_batch_500000'
 # output_dir = 'drive/My Drive/node2vec_new_ver/checkpoints/'
+
+
+"""
+
+isa settings: walk_len = 40, num_walks = 5, window_size = 5
+part_of settings: walk_len = 40 , num_walks = 10, window_size = 5
+
+"""
