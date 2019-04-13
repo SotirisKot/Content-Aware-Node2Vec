@@ -489,22 +489,18 @@ class GRUEncoder(nn.Module):
         if config.gru_encoder == '1':
             phr_emb_u, _ = self.encode(phr_emb_u, phr_lengths, phr_perm)
             phr_emb_v, _ = self.encode(phr_emb_v, phr_lengths, phr_perm)
-            ###
             if concat:
                 phr_emb = torch.cat((phr_emb_u, phr_emb_v), dim=1)
             else:
                 phr_emb = (phr_emb_u + phr_emb_v) / 2
-            ###
             return phr_emb
         else:
             phr_emb_u, idx_u = self.encode(phr_emb_u, phr_lengths, phr_perm)
             phr_emb_v, idx_v = self.encode(phr_emb_v, phr_lengths, phr_perm)
-            ###
             if concat:
                 phr_emb = torch.cat((phr_emb_u, phr_emb_v), dim=1)
             else:
                 phr_emb = (phr_emb_u + phr_emb_v) / 2
-            ###
             return phr_emb, idx_u, idx_v
 
     def save_embeddings(self, file_name, idx2word, use_cuda=False):
