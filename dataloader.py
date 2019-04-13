@@ -31,7 +31,6 @@ class Node2VecDataset(Dataset):
 
     def __getitem__(self, index):
         phr, context = next(self.data_gen)
-        # TODO - MAYBE return them as integers so the sample will be a dict of tensors..it might help with average
         sample = {'center': phr, 'context': context}
         return sample
 

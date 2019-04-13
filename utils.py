@@ -6,7 +6,7 @@ import numpy as np
 import config
 import os
 from pprint import pprint
-np.random.seed(12345)
+np.random.seed(1997)
 
 
 class Utils(object):
@@ -20,39 +20,40 @@ class Utils(object):
         else:
             self.walks = walks
 
+        # when we evaluate we provide no walks..so we skip this part
         if self.walks is not None:
-            data, self.frequencies, self.word2idx, self.idx2word = self.build_dataset(self.walks)
+            self.frequencies, self.word2idx, self.idx2word = self.build_dataset(self.walks)
             self.vocabulary_size = len(self.word2idx)
             print("Total words: ", self.vocabulary_size)
             # the sample_table it is used for negative sampling as they do in the original word2vec
             self.sample_table = self.create_sample_table()
 
     def build_word_vocab(self, walks):
-        data_vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence
+        data_vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence (in word2vec terminology)
         word2idx = {}
         if config.model == 'rnn' or config.model == 'average':
             word2idx['PAD'] = 0
         word2idx['UNKN'] = len(word2idx)
+        print(walks[0])
         for walk in tqdm(walks):
+
             for nodeid in walk:
                 data_vocabulary.append(nodeid)
                 phrase = self.phrase_dic[int(nodeid)]
-                # phrase = phrase.split()
                 for word in phrase:
                     try:
                         gb = word2idx[word]
                     except KeyError:
                         word2idx[word] = len(word2idx)
-        data_size_sample_table = len(data_vocabulary)
         idx2word = dict(zip(word2idx.values(), word2idx.keys()))
-        return data_size_sample_table, data_vocabulary, word2idx, idx2word
+        return data_vocabulary, word2idx, idx2word
 
     def build_dataset(self, walks):
         print('Building dataset..')
-        data_size_sample_table, vocabulary, word2idx, idx2word = self.build_word_vocab(walks)
+        vocabulary, word2idx, idx2word = self.build_word_vocab(walks)
         count = []
         count.extend(collections.Counter(vocabulary).most_common())
-        return vocabulary, count, word2idx, idx2word
+        return count, word2idx, idx2word
 
     def create_sample_table(self):
         print('Creating sample table..')

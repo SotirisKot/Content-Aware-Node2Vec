@@ -53,7 +53,6 @@ def unsort(output, perm_idx, dim=0):
     return output
 
 
-
 '''
 Baseline node2vec with the skipgram algorithm and the negative sampling
 '''
@@ -144,6 +143,7 @@ class AverageNode2Vec(nn.Module):
         self.v_embeddings.weight.data.uniform_(-0, 0)
 
     def fix_input(self, phr_inds=None, pos_inds=None, neg_inds=None):
+
         seq_lengths_phr = torch.LongTensor([len(seq) for seq in phr_inds])
         seq_lengths_pos = torch.LongTensor([len(seq) for seq in pos_inds])
         seq_lengths_neg = torch.LongTensor([len(seq) for seq in neg_inds])
@@ -481,23 +481,31 @@ class GRUEncoder(nn.Module):
             return emb
 
     def inference(self, phrases, concat=False):
-        # TODO create a method that encodes a batch
-        # TODO check if it works fine with batch_size=1
         phr, phr_lengths, phr_perm = self.fix_input(phr_inds=phrases)
-
-        #
+        ###
         phr_emb_u = self.u_embeddings(phr)
-        phr_emb_u, idxs_u = self.encode(phr_emb_u, phr_lengths, phr_perm)
-
         phr_emb_v = self.v_embeddings(phr)
-        phr_emb_v, idxs_v = self.encode(phr_emb_v, phr_lengths, phr_perm)
-        #
-        if concat:
-            phr_emb = torch.cat((phr_emb_u, phr_emb_v), dim=1)
+        ###
+        if config.gru_encoder == '1':
+            phr_emb_u, _ = self.encode(phr_emb_u, phr_lengths, phr_perm)
+            phr_emb_v, _ = self.encode(phr_emb_v, phr_lengths, phr_perm)
+            ###
+            if concat:
+                phr_emb = torch.cat((phr_emb_u, phr_emb_v), dim=1)
+            else:
+                phr_emb = (phr_emb_u + phr_emb_v) / 2
+            ###
+            return phr_emb
         else:
-            phr_emb = (phr_emb_u + phr_emb_v) / 2
-
-        return phr_emb, idxs_u, idxs_v
+            phr_emb_u, idx_u = self.encode(phr_emb_u, phr_lengths, phr_perm)
+            phr_emb_v, idx_v = self.encode(phr_emb_v, phr_lengths, phr_perm)
+            ###
+            if concat:
+                phr_emb = torch.cat((phr_emb_u, phr_emb_v), dim=1)
+            else:
+                phr_emb = (phr_emb_u + phr_emb_v) / 2
+            ###
+            return phr_emb, idx_u, idx_v
 
     def save_embeddings(self, file_name, idx2word, use_cuda=False):
         wv = {}

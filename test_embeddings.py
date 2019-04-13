@@ -14,8 +14,8 @@ import random
 import torch
 import models
 import config
-my_seed = 1997
-random.seed(my_seed)
+# my_seed = 1997
+# random.seed(my_seed)
 
 handler = None
 output_dir = '/home/sotiris/Documents/logger/'
@@ -43,12 +43,12 @@ def tsne_plot(dictionary):
     vocab = list(dictionary.keys())
     random.shuffle(vocab)
     counter = 0
-    for word in vocab[:250]:
+    for word in tqdm(vocab[:100]):
         # tokens.append(dictionary[word])
         # labels.append(word)
-        # if 'toe' in word:
-            tokens.append(dictionary[word])
-            labels.append(word)
+        #if 'carcinoma' in word or 'syndrome' in word:
+        tokens.append(dictionary[word])
+        labels.append(word)
         #     counter += 1
         # if counter == 100:
         #     break
@@ -110,7 +110,7 @@ def get_dictionary(reversed_dic, all_embeddings_dic):
 # f = open('C:/Users/sotir/Desktop/part_of/part_of_average_2_words_link_predict.emb')
 # f.readline()
 #all_embeddings_dic = {}
-#all_embeddings_dic = pickle.load(open('/home/sotiris/PycharmProjects/node2vec_word_embeds/rnn_node2vec/node_embeddings_phrases.p', 'rb'))
+#all_embeddings_dic = pickle.load(open('/home/sotiris/PycharmProjects/Content-Aware-N2V/rnn_node2vec/node_embeddings_phrases.p', 'rb'))
 # all_embeddings_dic = pickle.load(open('/home/sotiris/Downloads/rnn_bigru/node_embeddings_phrases_concat.p', 'rb'))
 #all_embeddings_dic = pickle.load(open('/home/sotiris/Downloads/rnn_1_epoch/node_embeddings_phrases.p', 'rb'))
 # for i, line in enumerate(f):
@@ -171,7 +171,7 @@ def load_dictionaries(words=False):
     if words:
         all_embeddings_words = load_embeddings('/home/sotiris/Downloads/isa_gru_normal_lr/isa_gru_words_link_predict.emb')
     else:
-        all_embeddings_words = pickle.load(open('/home/sotiris/Downloads/isa_gru_normal_lr/easy/node_embeddings_phrases.p', 'rb'))
+        all_embeddings_words = pickle.load(open('/home/sotiris/Downloads/isa_gru_normal_lr/hard/node_embeddings_phrases.p', 'rb'))
 
     return all_embeddings_words
 
@@ -354,15 +354,16 @@ def encode_one_unknown_sentence(all_embs, sent):
     pprint(sorted_sims[-10:])
 
 
-all_embeddings = load_dictionaries(words=True)
-# phrase_dic = (pickle.load(open('/home/sotiris/PycharmProjects/node2vec_word_embeds/data_utilities/isa/isa_reversed_dic.p', 'rb')))
+all_embeddings = load_dictionaries(words=False)
+# phrase_dic = (pickle.load(open('/home/sotiris/PycharmProjects/Content-Aware-N2V/data_utilities/part_of/part_of_reversed_dic.p', 'rb')))
 # for id, phr in phrase_dic.items():
-#     if phr == 'antiemetic agent':
+#     if phr == 'type v collagen':
 #         print(id, phr)
 #         exit(0)
 
 # encode_one_unknown_sentence(all_embeddings, 'white hair')
-find_most_least_sim("foot", all_embeddings=all_embeddings, word=True)
+find_most_least_sim("tp53 gene", all_embeddings=all_embeddings, word=False)
+# print(cos_sim(all_embeddings['oxyphil cell of parathyroid gland'], all_embeddings['plasma membrane']))
 # stress_test(all_embeddings)
 # create_json_words(all_embeddings)
 # create_json_phrases(all_embeddings, stress=1)

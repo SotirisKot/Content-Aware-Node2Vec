@@ -15,8 +15,8 @@ import codecs
 import os
 from random import shuffle
 import itertools
+import random
 import json
-import seaborn as sns
 from collections import Counter
 from collections import OrderedDict
 import logging
@@ -26,11 +26,12 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve, auc, roc_auc_score, average_precision_score, precision_recall_curve
 
+random.seed(1997)
 use_cuda = torch.cuda.is_available()
-sns.set()
+
 bioclean = lambda t: re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
                             t.replace('"', '').replace('/', ' ').replace('\\', '').replace("'",
-                                                                                          '').strip().lower()).split()
+                                                                                           '').strip().lower()).split()
 
 
 def tokenize(x):
@@ -109,10 +110,11 @@ def get_edge_embeddings(edge_list, node_embeddings, model_type, phrase_dic):
     else:
         edge_embeddings = []
         for edge in edge_list:
-            emb_node1 = node_embeddings[edge[0]]
-            emb_node2 = node_embeddings[edge[1]]
-            hadamard = np.multiply(emb_node1, emb_node2)
-            edge_embeddings.append(hadamard)
+            if edge[0] in node_embeddings and edge[1] in node_embeddings:
+                emb_node1 = node_embeddings[edge[0]]
+                emb_node2 = node_embeddings[edge[1]]
+                hadamard = np.multiply(emb_node1, emb_node2)
+                edge_embeddings.append(hadamard)
         edge_embeddings = np.array(edge_embeddings)
         return edge_embeddings
 
@@ -137,7 +139,7 @@ def load_embeddings(file):
             line = line.strip().split(' ')
             word = line[0]
             embedding = [float(x) for x in line[1:]]
-            assert len(embedding) == 50
+            assert len(embedding) == 30
             node_embeddings[word] = embedding
     return node_embeddings
 
@@ -210,7 +212,8 @@ class Node2Vec:
                 else:
                     device = torch.device('cpu')
 
-                modelcheckpoint = torch.load(os.path.join(config.checkpoint_dir, config.checkpoint_to_load), map_location=device)
+                modelcheckpoint = torch.load(os.path.join(config.checkpoint_dir, config.checkpoint_to_load),
+                                             map_location=device)
                 model.load_state_dict(modelcheckpoint['state_dict'])
                 optimizer.load_state_dict(modelcheckpoint['optimizer'])
                 last_batch_num = modelcheckpoint['batch_num']
@@ -221,20 +224,24 @@ class Node2Vec:
             model.train()
             iterator = tqdm(dataloader)
             for sample in iterator:
+
                 # if we resume training--continue from the last batch we stopped
                 if batch_num <= last_batch_num:
                     batch_num += 1
                     continue
-                ###
+
+                ###-----------
                 phr = sample['center']
                 pos_context = sample['context']
                 neg_v = np.random.choice(self.utils.sample_table, size=(len(phr) * self.neg_sample_num)).tolist()
-                ###
-                if self.model_type is 'rnn' or self.model_type is 'average':
+                ###-----------
 
-                    phr = [phr2idx(self.utils.phrase_dic[int(phr_id)], self.word2idx) for phr_id in phr]
-                    pos_context = [phr2idx(self.utils.phrase_dic[int(item)], self.word2idx) for item in pos_context]
-                    neg_v = [phr2idx(self.utils.phrase_dic[int(item)], self.word2idx) for item in neg_v]
+                # -----------
+                if self.model_type is 'rnn' or self.model_type is 'average':
+                    phr = [phr2idx(self.utils.phrase_dic[phr_id.item()], self.word2idx) for phr_id in phr]
+                    pos_context = [phr2idx(self.utils.phrase_dic[item.item()], self.word2idx) for item in pos_context]
+                    neg_v = [phr2idx(self.utils.phrase_dic[item], self.word2idx) for item in neg_v]
+                # -----------
 
                 # --------------
                 optimizer.zero_grad()
@@ -251,7 +258,7 @@ class Node2Vec:
                         batch_num))
                     batch_costs = []
 
-                # save the model every 500000 batches
+                # save the model every 300000 batches
                 if batch_num % 300000 == 0:
                     print("Saving at {} batches".format(batch_num))
                     state = {'epoch': epoch + 1,
@@ -262,7 +269,8 @@ class Node2Vec:
                              'batch_num': batch_num,
                              'loss': loss.cpu().item()}
                     save_checkpoint(state,
-                                    filename=self.odir_checkpoint + 'isa_gru_checkpoint_batch_{}.pth.tar'.format(batch_num))
+                                    filename=self.odir_checkpoint + 'isa_gru_checkpoint_batch_{}.pth.tar'.format(
+                                        batch_num))
                 ###
                 batch_num += 1
 
@@ -323,81 +331,86 @@ class Node2Vec:
         else:
             node_embeddings = load_embeddings(embeddings_file)
 
-        train_pos_edge_embs = get_edge_embeddings(train_pos, node_embeddings, self.model_type, phrase_dic)
-        train_neg_edge_embs = get_edge_embeddings(train_neg, node_embeddings, self.model_type, phrase_dic)
-        train_set = np.concatenate([train_pos_edge_embs, train_neg_edge_embs])
+        if config.evaluate_standard:
+            get_auc(test_pos, phrase_dic, node_embeddings=node_embeddings, test_neg_st=test_neg)
 
-        # labels: 1-> link exists, 0-> false edge
-        train_labels = np.zeros(len(train_set))
-        train_labels[:len(train_pos_edge_embs)] = 1
+        if config.evaluate_lr:
 
-        # for testing
-        test_pos_edge_embs = get_edge_embeddings(test_pos, node_embeddings, self.model_type, phrase_dic)
-        test_neg_edge_embs = get_edge_embeddings(test_neg, node_embeddings, self.model_type, phrase_dic)
-        test_set = np.concatenate([test_pos_edge_embs, test_neg_edge_embs])
-        test_set_phrases = np.concatenate([test_pos, test_neg])
+            test_neg = pickle.load(open(config.test_neg, 'rb'))
+            train_pos_edge_embs = get_edge_embeddings(train_pos, node_embeddings, self.model_type, phrase_dic)
+            train_neg_edge_embs = get_edge_embeddings(train_neg, node_embeddings, self.model_type, phrase_dic)
+            train_set = np.concatenate([train_pos_edge_embs, train_neg_edge_embs])
 
-        # labels: 1-> link exists, 0-> false edge
-        test_labels = np.zeros(len(test_set))
-        test_labels[:len(test_pos_edge_embs)] = 1
-        test_labels_phrases = np.zeros(len(test_set_phrases))
-        test_labels_phrases[:len(test_pos)] = 1
+            # labels: 1-> link exists, 0-> false edge
+            train_labels = np.zeros(len(train_set))
+            train_labels[:len(train_pos_edge_embs)] = 1
 
-        # train the classifier and evaluate in the test set
+            # for testing
+            test_pos_edge_embs = get_edge_embeddings(test_pos, node_embeddings, self.model_type, phrase_dic)
+            test_neg_edge_embs = get_edge_embeddings(test_neg, node_embeddings, self.model_type, phrase_dic)
+            test_set = np.concatenate([test_pos_edge_embs, test_neg_edge_embs])
+            test_set_phrases = np.concatenate([test_pos, test_neg])
 
-        # shuffle train set
-        idx_list = [i for i in range(len(train_labels))]
-        shuffle(idx_list)
-        train_set = train_set[idx_list]
-        train_labels = train_labels[idx_list]
+            # labels: 1-> link exists, 0-> false edge
+            test_labels = np.zeros(len(test_set))
+            test_labels[:len(test_pos_edge_embs)] = 1
+            test_labels_phrases = np.zeros(len(test_set_phrases))
+            test_labels_phrases[:len(test_pos)] = 1
 
-        # shuffle test set
-        idx_list = [i for i in range(len(test_labels))]
-        shuffle(idx_list)
-        test_set = test_set[idx_list]
-        test_set_phrases = test_set_phrases[idx_list]
-        test_labels = test_labels[idx_list]
-        test_labels_phrases = test_labels_phrases[idx_list]
+            # train the classifier and evaluate in the test set
+            # shuffle train set
+            idx_list = [i for i in range(len(train_labels))]
+            shuffle(idx_list)
+            train_set = train_set[idx_list]
+            train_labels = train_labels[idx_list]
 
-        classifier = LogisticRegression()
-        classifier.fit(train_set, train_labels)
+            # shuffle test set
+            idx_list = [i for i in range(len(test_labels))]
+            shuffle(idx_list)
+            test_set = test_set[idx_list]
+            test_set_phrases = test_set_phrases[idx_list]
+            test_labels = test_labels[idx_list]
+            test_labels_phrases = test_labels_phrases[idx_list]
 
-        # evaluate
-        test_preds = classifier.predict_proba(test_set)
-        create_confusion_matrix(test_preds, phrase_dic, test_labels_phrases, test_set_phrases)
-        false_positive_rate, true_positive_rate, thresholds = roc_curve(test_labels, test_preds[:, 1])
-        average_precision = average_precision_score(test_labels, test_preds[:, 1])
-        test_auc = auc(false_positive_rate, true_positive_rate)
-        test_roc = roc_auc_score(test_labels, test_preds[:, 1])
-        print('node2vec Test ROC score: ', str(test_roc))
-        print('node2vec Test AUC score: ', str(test_auc))
-        print('node2vec Test AP score: ', str(average_precision))
-        # precision, recall, _ = precision_recall_curve(test_labels, test_preds[:, 1])
-        #
-        # plt.step(recall, precision, color='b', alpha=0.2,
-        #          where='post')
-        # plt.fill_between(recall, precision, step='post', alpha=0.2,
-        #                  color='b')
-        #
-        # plt.xlabel('Recall')
-        # plt.ylabel('Precision')
-        # plt.ylim([0.0, 1.05])
-        # plt.xlim([0.0, 1.0])
-        # plt.title('2-class Precision-Recall curve: AP={0:0.2f}'.format(
-        #     average_precision))
-        # plt.show()
-        # plt.figure(figsize=(8, 8))
-        # plt.xlim([-0.01, 1.00])
-        # plt.ylim([-0.01, 1.01])
-        # plt.plot(false_positive_rate, true_positive_rate, lw=1, label='{} curve (AUC = {:0.2f})'.format('RF', test_auc))
-        #
-        # plt.xlabel('False Positive Rate', fontsize=16)
-        # plt.ylabel('True Positive Rate', fontsize=16)
-        # plt.title('ROC curve', fontsize=16)
-        # plt.legend(loc='lower right', fontsize=13)
-        # plt.plot([0, 1], [0, 1], color='navy', lw=1, linestyle='--')
-        # plt.axes().set_aspect('equal')
-        # plt.show()
+            classifier = LogisticRegression()
+            classifier.fit(train_set, train_labels)
+
+            # evaluate
+            test_preds = classifier.predict_proba(test_set)
+            create_confusion_matrix(test_preds, phrase_dic, test_labels_phrases, test_set_phrases)
+            false_positive_rate, true_positive_rate, thresholds = roc_curve(test_labels, test_preds[:, 1])
+            average_precision = average_precision_score(test_labels, test_preds[:, 1])
+            test_auc = auc(false_positive_rate, true_positive_rate)
+            test_roc = roc_auc_score(test_labels, test_preds[:, 1])
+            print('node2vec Test ROC score: ', str(test_roc))
+            print('node2vec Test AUC score: ', str(test_auc))
+            print('node2vec Test AP score: ', str(average_precision))
+            # precision, recall, _ = precision_recall_curve(test_labels, test_preds[:, 1])
+            #
+            # plt.step(recall, precision, color='b', alpha=0.2,
+            #          where='post')
+            # plt.fill_between(recall, precision, step='post', alpha=0.2,
+            #                  color='b')
+            #
+            # plt.xlabel('Recall')
+            # plt.ylabel('Precision')
+            # plt.ylim([0.0, 1.05])
+            # plt.xlim([0.0, 1.0])
+            # plt.title('2-class Precision-Recall curve: AP={0:0.2f}'.format(
+            #     average_precision))
+            # plt.show()
+            # plt.figure(figsize=(8, 8))
+            # plt.xlim([-0.01, 1.00])
+            # plt.ylim([-0.01, 1.01])
+            # plt.plot(false_positive_rate, true_positive_rate, lw=1, label='{} curve (AUC = {:0.2f})'.format('RF', test_auc))
+            #
+            # plt.xlabel('False Positive Rate', fontsize=16)
+            # plt.ylabel('True Positive Rate', fontsize=16)
+            # plt.title('ROC curve', fontsize=16)
+            # plt.legend(loc='lower right', fontsize=13)
+            # plt.plot([0, 1], [0, 1], color='navy', lw=1, linestyle='--')
+            # plt.axes().set_aspect('equal')
+            # plt.show()
 
     def create_node_embeddings(self, model, phrase_dic, word2idx):
         with torch.no_grad():
@@ -406,7 +419,8 @@ class Node2Vec:
             node_embeddings_phrases = {}
             fout = open(file_name, 'w')
             fout.write('%d %d\n' % (len(word2idx), self.embedding_dim))
-            json_list_ultra = []
+            json_list_triplet_u = []
+            json_list_triplet_v = []
             keys = list(phrase_dic.keys())
             for phridx in tqdm(range(0, len(keys), self.batch_size)):
 
@@ -416,10 +430,14 @@ class Node2Vec:
                 phrase_emb, idx_u, idx_v = model(phr)
 
                 ###  create weights for visualizing the words that are getting pooled more often
-                # json_list = create_pooling_weights_for_batch(idx_u, phrase_dic, batch)
-                # json_list = create_attention_weights_for_batch(idx_u, phrase_dic, batch)
-                # for triplet in json_list:
-                #     json_list_ultra.append(triplet)
+                json_list_u = create_pooling_weights_for_batch(idx_u, phrase_dic, batch)
+                json_list_v = create_pooling_weights_for_batch(idx_v, phrase_dic, batch)
+                # # # json_list = create_attention_weights_for_batch(idx_u, phrase_dic, batch)
+                for triplet in json_list_u:
+                    json_list_triplet_u.append(triplet)
+
+                for triplet in json_list_v:
+                    json_list_triplet_v.append(triplet)
                 ###
 
                 for idx, phr_id in enumerate(batch):
@@ -444,7 +462,7 @@ class Node2Vec:
             #     json.dump(json_list_ultra, fp)
 
             #### create html file with the heatmap of each phrase
-            plot_attention(json_list_ultra, 'max_pool_isa.html')
+            plot_attention(json_list_triplet_u, json_list_triplet_v, 'heatmaps.html')
             ####
             return node_embeddings
 
@@ -504,12 +522,16 @@ def create_confusion_matrix(preds, phrase_dic, test_labels_phrases, test_set_phr
             edge = test_set_phrases[idx]
             phrase1 = " ".join(phrase_dic[edge[0]])
             phrase2 = " ".join(phrase_dic[edge[1]])
-            json_list_false_negative.append(OrderedDict([("phrase1: ", str(phrase1)), ("phrase2: ", str(phrase2))]))
+            positivity = str(pred[0])
+            json_list_false_negative.append(
+                OrderedDict([("phrase1: ", str(phrase1)), ("phrase2: ", str(phrase2)), ("positivity: ", positivity)]))
         elif pred[0] < pred[1] and test_labels_phrases[idx] == 0:
             edge = test_set_phrases[idx]
             phrase1 = " ".join(phrase_dic[edge[0]])
             phrase2 = " ".join(phrase_dic[edge[1]])
-            json_list_false_positive.append(OrderedDict([("phrase1: ", str(phrase1)), ("phrase2: ", str(phrase2))]))
+            positivity = str(pred[1])
+            json_list_false_positive.append(
+                OrderedDict([("phrase1: ", str(phrase1)), ("phrase2: ", str(phrase2)), ("positivity: ", positivity)]))
         elif pred[0] < pred[1] and test_labels_phrases[idx] == 1:
             edge = test_set_phrases[idx]
             phrase1 = " ".join(phrase_dic[edge[0]])
@@ -520,6 +542,13 @@ def create_confusion_matrix(preds, phrase_dic, test_labels_phrases, test_set_phr
             phrase1 = " ".join(phrase_dic[edge[0]])
             phrase2 = " ".join(phrase_dic[edge[1]])
             json_list_true_negative.append(OrderedDict([("phrase1: ", str(phrase1)), ("phrase2: ", str(phrase2))]))
+        elif pred[0] == pred[1]:
+            edge = test_set_phrases[idx]
+            phrase1 = " ".join(phrase_dic[edge[0]])
+            phrase2 = " ".join(phrase_dic[edge[1]])
+            positivity = str(pred[1])
+            json_list_true_negative.append(
+                OrderedDict([("phrase1: ", str(phrase1)), ("phrase2: ", str(phrase2)), ("positivity: ", positivity)]))
 
     with open("json_false_positive.json", 'w') as fp:
         json.dump(json_list_false_positive, fp)
@@ -534,7 +563,7 @@ def create_confusion_matrix(preds, phrase_dic, test_labels_phrases, test_set_phr
         json.dump(json_list_true_negative, fp)
 
 
-def plot_attention(json_list, filename):
+def plot_attention(json_list_u, json_list_v, filename):
     html_content = '<!DOCTYPE html><html><head> ' \
                    '<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">' \
                    '<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>' \
@@ -543,12 +572,14 @@ def plot_attention(json_list, filename):
                    '<body>'
 
     html_content += '<ul>'
-    for words, attention in json_list:
+
+    for phr_u, phr_v in zip(json_list_u, json_list_v):
         html_content += '<li>'
-        for word in words.split():
+        for word in phr_u[0].split():
             try:
+                attention = phr_u[1][word] + phr_v[1][word]
                 html_content += '<span style= "background-color:rgba(255, 0, 0, {0:.1f});">{1} </span>'.format(
-                    attention[word], word)
+                    attention, word)
             except KeyError:
                 html_content += '<span>{} </span>'.format(word)
         html_content += '<br/>'
@@ -561,3 +592,58 @@ def plot_attention(json_list, filename):
     with open(path, 'w') as f:
         f.write(html_content)
     webbrowser.open(url)
+
+
+def cos_sim(a, b):
+    dot_product = np.dot(a, b)
+    norm_a = np.linalg.norm(a)
+    norm_b = np.linalg.norm(b)
+    return dot_product / (norm_a * norm_b)
+
+
+def get_auc(test_pos, phrase_dic, node_embeddings=None, test_neg_st=None):
+    ###
+    node2vec = {}
+    if config.model == 'average':
+        for idx, phrase in phrase_dic.items():
+            node2vec[idx] = get_average_embedding(phrase, node_embeddings)
+    else:
+        node2vec = node_embeddings
+    ###
+    edges = [i for i in test_pos]
+    nodes = list(set([i for j in edges for i in j]))
+    a = 0
+    b = 0
+    if test_neg_st is None:
+        for i, j in edges:
+            if i in node2vec.keys() and j in node2vec.keys():
+                dot1 = np.dot(node2vec[i], node2vec[j])
+                random_node = random.sample(nodes, 1)[0]
+                while random_node == j or random_node not in node2vec.keys():
+                    random_node = random.sample(nodes, 1)[0]
+                dot2 = np.dot(node2vec[i], node2vec[random_node])
+                if dot1 > dot2:
+                    a += 1
+                elif dot1 == dot2:
+                    a += 0.5
+                b += 1
+    else:
+        for i, j in edges:
+            if i in node2vec.keys() and j in node2vec.keys():
+                dot1 = np.dot(node2vec[i], node2vec[j])
+                for edge in test_neg_st:
+                    if edge[0] == i:
+                        if edge[1] in node2vec.keys():
+                            dot2 = np.dot(node2vec[i], node2vec[edge[1]])
+                            if dot1 > dot2:
+                                a += 1
+                            elif dot1 == dot2:
+                                a += 0.5
+                            b += 1
+                            test_neg_st.remove(edge)
+                            break
+            else:
+                print(i, j)
+    print(a)
+    print(b)
+    print("Auc value:", (float(a) / b))

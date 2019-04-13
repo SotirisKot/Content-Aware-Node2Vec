@@ -1,13 +1,10 @@
 from __future__ import print_function
 
 import argparse
-from collections import OrderedDict
 from pprint import pprint
-
 import numpy as np
 import networkx as nx
 from tqdm import tqdm
-import json
 import node2vec
 import os
 import pickle
@@ -110,8 +107,6 @@ def learn_embeddings(walks, train_pos=None, train_neg=None, test_pos=None, test_
 
 
 def create_train_test_splits_1st_way(percent_pos, percent_neg, graph, percent_dev=None):
-    #TODO add the code that creates a developemnt set----MUST
-
     # This method creates the train,test splits...from the dataset
     # we remove some percentage of the existing edges(ensuring the graph remains connected)
     # and use them as positive samples
@@ -131,12 +126,10 @@ def create_train_test_splits_1st_way(percent_pos, percent_neg, graph, percent_de
     test_edges = set()
     counter1 = 0
     counter2 = 0
-    # if not args.directed:
-    #     original_connected_comps = nx.number_connected_components(graph)
-    #     print('Connected components: ', original_connected_comps)
+    if not graph.is_directed():
+        original_connected_comps = nx.number_connected_components(graph)
+        print('Connected components: ', original_connected_comps)
 
-    print("Converting graph back to undirected..")
-    graph = graph.to_undirected()
     print('Creating positive test samples..')
     # shuffle the edges and iterate over them creating the test set
     np.random.shuffle(all_edges)
@@ -148,12 +141,7 @@ def create_train_test_splits_1st_way(percent_pos, percent_neg, graph, percent_de
         node1 = edge[0]
         node2 = edge[1]
         # make sure that the graph remains connected
-        # --from https://github.com/lucashu1/link-prediction/blob/master/gae/preprocessing.py
         graph.remove_edge(node1, node2)
-        # if not args.directed:
-        #     if nx.number_connected_components(graph) > original_connected_comps:
-        #         graph.add_edge(node1, node2)
-        #         continue
         reachable_from_v1 = nx.connected._plain_bfs(graph, edge[0])
         if edge[1] not in reachable_from_v1:
             graph.add_edge(node1, node2)
@@ -270,9 +258,9 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
     test_edges = set()
     counter1 = 0
     counter2 = 0
-    # if not args.directed:
-    #     original_connected_comps = nx.number_connected_components(graph)
-    #     print('Connected components: ', original_connected_comps)
+    if not graph.is_directed():
+        original_connected_comps = nx.number_connected_components(graph)
+        print('Connected components: ', original_connected_comps)
 
     np.random.shuffle(all_edges)
     # shuffle the edges and iterate over them creating the test set
@@ -282,7 +270,7 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
     # to generate this type of negative examples we must convert the graph to directed
     print('Creating negative test samples..')
     test_false_edges = set()
-    while len(test_false_edges) < 61849:
+    while len(test_false_edges) < 2543:
         for node in tqdm(all_nodes):
             hop = 1
             parents = []
@@ -296,6 +284,7 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
                 # if a node has more than one parents generate a random number and select a random one
                 if len(og_parent) != 0:
                     og_parent, hop = return_parents(graph, og_parent[np.random.randint(0, len(og_parent))], hop)
+                    # we must check again if parents exist
                     if len(og_parent) != 0:
                         parents.append(og_parent[np.random.randint(0, len(og_parent))])
                 # no more parents
@@ -338,7 +327,7 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
                 if sampled_edge in test_false_edges or sampled_edge_rev in test_false_edges:
                     continue
                 # everything is ok so we add the fake edge to the test_set
-                if len(test_false_edges) == 61849:
+                if len(test_false_edges) == 2543:
                     # we generated all the false edges we wanted
                     break
                 else:
@@ -349,7 +338,7 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
     # do the same for the train_set
     print('Creating negative training samples...')
     train_false_edges = set()
-    while len(train_false_edges) < 294692:
+    while len(train_false_edges) < 2543:
         for node in tqdm(all_nodes):
             hop = 1
             parents = []
@@ -363,6 +352,7 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
                 # if a node has more than one parents generate a random number and select a random one
                 if len(og_parent) != 0:
                     og_parent, hop = return_parents(graph, og_parent[np.random.randint(0, len(og_parent))], hop)
+                    # we must check again if any parents exist
                     if len(og_parent) != 0:
                         parents.append(og_parent[np.random.randint(0, len(og_parent))])
                 # no more parents
@@ -407,7 +397,7 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
                 if sampled_edge in train_false_edges or sampled_edge_rev in train_false_edges:
                     continue
                 # everything is ok so we add the fake edge to the test_set
-                if len(train_false_edges) == 294692:
+                if len(train_false_edges) == 2543:
                     break
                 else:
                     train_false_edges.add(sampled_edge)
@@ -420,10 +410,10 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
 
     print("Converting graph to undirected..")
     graph = graph.to_undirected()
+
     print('Creating positive test samples..')
     # shuffle the edges and iterate over them creating the test set
     np.random.shuffle(all_edges)
-    patience = 0
     for edge in tqdm(all_edges):
         # if idx % 100 == 0:
         #     print('Edge: {}/{}'.format(idx, num_edges))
@@ -432,12 +422,7 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
         node1 = edge[0]
         node2 = edge[1]
         # make sure that the graph remains connected
-        # --from https://github.com/lucashu1/link-prediction/blob/master/gae/preprocessing.py
         graph.remove_edge(node1, node2)
-        # if not args.directed:
-        #     if nx.number_connected_components(graph) > original_connected_comps:
-        #         graph.add_edge(node1, node2)
-        #         continue
         reachable_from_v1 = nx.connected._plain_bfs(graph, edge[0])
         if edge[1] not in reachable_from_v1:
             graph.add_edge(node1, node2)
@@ -449,13 +434,8 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
             train_edges.remove(edge)
             counter2 += 1
         elif len(test_edges) == num_pos_test_edges:
-            if not args.directed:
+            if not graph.is_directed():
                 graph.add_edge(node1, node2)
-            break
-        elif len(test_edges) == 61849:
-            patience += 1
-
-        if patience == 3:
             break
 
     print("Added: {} number of edges to positive test".format(counter2))
@@ -489,8 +469,92 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
     return train_pos, train_neg, test_pos, test_neg
 
 
+def create_train_test_splits_3rd_way(graph, test_pos):
+    # create a test split with negative edges...one for each node in positive test split
+    np.random.seed(1997)
+    all_edges = [edge for edge in graph.edges]
+    all_edges_set = set(all_edges)  # for quick access
+    edges = [i for i in test_pos]
+    nodes = list([j[0] for j in edges])
+
+    test_false_edges = set()
+    for node in tqdm(nodes):
+        hop = 1
+        parents = []
+
+        # for parents
+        # we can skip the og_parent and not append it in the list.
+        # this is the first hop
+        og_parent, hop = return_parents(graph, node, hop)
+        while hop != 6:
+
+            # if a node has more than one parents generate a random number and select a random one
+            if len(og_parent) != 0:
+                og_parent, hop = return_parents(graph, og_parent[np.random.randint(0, len(og_parent))], hop)
+                if len(og_parent) != 0:
+                    parents.append(og_parent[np.random.randint(0, len(og_parent))])
+            # no more parents
+            else:
+                break
+
+        # the first parent in the list is 2 hops away from our focus node.
+        if len(parents) > 2:
+            # select a random parent +1 hop away and get his children.
+            rand_par = parents[int(np.random.uniform(0, len(parents)))]
+
+            # get his children and select a random to node to create a negative example with
+            children = list(graph.successors(rand_par))
+
+            # we must exclude ancestors of the focus node from the sampling..so we remove the common elements from these lists
+            cleaned_children = [child for child in children if child not in parents]
+            if len(cleaned_children) != 0:
+                path_exists = False
+                rev_path_exists = False
+                rand_child = cleaned_children[int(np.random.uniform(0, len(cleaned_children)))]
+                reachable_from_v1 = nx.connected._plain_bfs(graph, node)
+                if rand_child in reachable_from_v1:
+                    path_exists = True
+
+                reachable_from_v1 = nx.connected._plain_bfs(graph, rand_child)
+                if node in reachable_from_v1:
+                    rev_path_exists = True
+
+                # the focus node might belong in the children so we must check it
+                if node != rand_child and not path_exists and not rev_path_exists:
+                    sampled_edge = (node, rand_child)
+                    sampled_edge_rev = (rand_child, node)
+                else:
+                    continue
+            else:
+                continue
+            # check if we sampled a real edge or an already sampled one
+            if sampled_edge in all_edges_set or sampled_edge_rev in all_edges_set:
+                continue
+            if sampled_edge in test_false_edges or sampled_edge_rev in test_false_edges:
+                continue
+            # everything is ok so we add the fake edge to the test_set
+            if len(test_false_edges) == len(nodes):
+                # we generated all the false edges we wanted
+                break
+            else:
+                test_false_edges.add(sampled_edge)
+        else:
+            continue
+
+    odir = 'datasets/part_of_hard_splits'
+    if not os.path.exists(odir):
+        os.makedirs(odir)
+
+    test_neg = list(test_false_edges)
+    with open("{}.p".format(os.path.join(odir, 'part_of_test_neg_ver_4')), 'wb') as dump_file:
+        pickle.dump(test_neg, dump_file)
+
+    return test_false_edges
+
+
 def main(args):
-    nx_G = read_graph(file=args.input, get_connected_graph=False, remove_selfloops=True, get_directed=False)
+    nx_G = read_graph(file=args.input, get_connected_graph=True, remove_selfloops=True, get_directed=False)
+
     # children = list(nx_G.successors(18060))
     # print(len(children))
     # print(children)
@@ -506,21 +570,20 @@ def main(args):
     #         max_len = len(phr)
     # avg =float(total_len) / float(len(phrase_dic))
     # print('The average is: ', avg)
-    #
     # print('The maximun length of a sentence is: ', max_len)
     # print('The phrase', phr_str)
     # exit(0)
     # for child in children:
     #     print(phrase_dic[child])
     # exit(0)
-    # print(nx_G.number_of_nodes(), nx_G.number_of_edges())
-    # print()
+    # _,_,_,_ = create_train_test_splits_2nd_way(0.5,0.5,nx_G)
+    print('Original Graph: nodes: {}, edges: {}'.format(nx_G.number_of_nodes(), nx_G.number_of_edges()))
+    print()
     train_pos = pickle.load(open(config.train_pos, 'rb'))
     test_pos = pickle.load(open(config.test_pos, 'rb'))
     train_neg = pickle.load(open(config.train_neg, 'rb'))
     test_neg = pickle.load(open(config.test_neg, 'rb'))
 
-    # train_pos, train_neg, test_pos, test_neg = create_train_test_splits_1st_way(0.5, 0.5, nx_G)
     print('Number of positive training samples: ', len(train_pos))
     print('Number of negative training samples: ', len(train_neg))
     print('Number of positive testing samples: ', len(test_pos))
@@ -529,11 +592,12 @@ def main(args):
         file=config.train_graph,
         get_connected_graph=False,
         remove_selfloops=False)
+    # print(len(nx.shortest_path(train_graph, 4540, 16297)))
+    # exit()
 
     print(
         'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
     print('Number of connected components: ', nx.number_connected_components(train_graph))
-
     # print("Created new Dataset..")
     # exit(0)
     if config.train:
