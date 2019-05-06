@@ -34,7 +34,6 @@ class Utils(object):
         if config.model == 'rnn' or config.model == 'average':
             word2idx['PAD'] = 0
         word2idx['UNKN'] = len(word2idx)
-        print(walks[0])
         for walk in tqdm(walks):
 
             for nodeid in walk:

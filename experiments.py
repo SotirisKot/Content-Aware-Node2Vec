@@ -1,6 +1,8 @@
 from __future__ import print_function
 
 import argparse
+import collections
+import re
 from pprint import pprint
 import numpy as np
 import networkx as nx
@@ -469,10 +471,10 @@ def create_train_test_splits_2nd_way(percent_pos, percent_neg, graph, percent_de
     return train_pos, train_neg, test_pos, test_neg
 
 
-def create_train_test_splits_3rd_way(graph, test_pos):
+def create_train_test_splits_3rd_way(graph, test_pos, og_graph):
     # create a test split with negative edges...one for each node in positive test split
     np.random.seed(1997)
-    all_edges = [edge for edge in graph.edges]
+    all_edges = [edge for edge in og_graph.edges]
     all_edges_set = set(all_edges)  # for quick access
     edges = [i for i in test_pos]
     nodes = list([j[0] for j in edges])
@@ -541,24 +543,57 @@ def create_train_test_splits_3rd_way(graph, test_pos):
         else:
             continue
 
-    odir = 'datasets/part_of_hard_splits'
+    odir = 'datasets/isa_hard_splits'
     if not os.path.exists(odir):
         os.makedirs(odir)
 
     test_neg = list(test_false_edges)
-    with open("{}.p".format(os.path.join(odir, 'part_of_test_neg_ver_4')), 'wb') as dump_file:
+    with open("{}.p".format(os.path.join(odir, 'isa_test_neg_ver_4')), 'wb') as dump_file:
         pickle.dump(test_neg, dump_file)
 
     return test_false_edges
 
 
+bioclean = lambda t: re.sub('[.,?;*!%^&_+():-\[\]{}]', '',
+                            t.replace('"', '').replace('/', ' ').replace('\\', '').replace("'",
+                                                                                           '').strip().lower()).split()
+
+
+def tokenize(x):
+    return bioclean(x)
+
+
+def get_index(w, vocab):
+    try:
+        return vocab[w]
+    except KeyError:
+        return vocab['UNKN']
+
+
+def phr2idx(phr, word_vocab):
+    p = [get_index(t, word_vocab) for t in phr]
+    return p
+
+
+def clean_dictionary(phrase_dic):
+    for nodeid, phrase in phrase_dic.items():
+        phrase_dic[nodeid] = tokenize(phrase)
+    return phrase_dic
+
+
 def main(args):
     nx_G = read_graph(file=args.input, get_connected_graph=True, remove_selfloops=True, get_directed=False)
-
+    # print(list(nx_G.successors(145352)))
+    # all_edges = [edge for edge in nx_G.edges]
     # children = list(nx_G.successors(18060))
     # print(len(children))
     # print(children)
-    # phrase_dic = pickle.load(open(config.phrase_dic, 'rb'))
+
+    # phrase_dic = clean_dictionary(pickle.load(open(config.phrase_dic, 'rb')))
+    # for id, phr in phrase_dic.items():
+    #     phrase_dic[id] = " ".join(phr)
+    # phrase_dic = dict(zip(phrase_dic.values(), phrase_dic.keys()))
+
     # max_len = 0
     # phr_str = None
     # total_len = 0
@@ -591,14 +626,98 @@ def main(args):
     train_graph = read_graph(
         file=config.train_graph,
         get_connected_graph=False,
-        remove_selfloops=False)
-    # print(len(nx.shortest_path(train_graph, 4540, 16297)))
+        remove_selfloops=False,
+        get_directed=False)
+
+    # i_nodes = set([j[0] for j in test_pos])
+    # i_neg_nodes = set([j[0] for j in test_neg])
+    # comparable_nodes = list(i_nodes - i_neg_nodes)
+    # print(len(comparable_nodes))
+    # exit(0)
+    # nodes_pos = list([j[0] for j in test_pos])
+    # nodes_neg = list([j[0] for j in test_neg])
+    # count_neg = []
+    # count_neg.extend(collections.Counter(nodes_neg).most_common())
+    # print(count_neg)
+    #
+    # count_pos = []
+    # count_pos.extend(collections.Counter(nodes_pos).most_common())
+    # print(count_pos)
+    # exit(0)
+    # test_neg_nodes = list(set([i for j in test_neg for i in j]))
+    # # test_pos_nodes = list(set([i for j in test_pos for i in j]))
+    # found = 0
+    # for node in test_neg_nodes:
+    #     for edge in test_pos:
+    #         if node == edge[0]:
+    #             found += 1
+    # print(found)
+    # exit(0)
+    # with open('test.txt', 'a') as file:
+    #     for edge in test_pos:
+    #         file.write(str(edge))
+    #         file.write('\n')
+    #
+    # with open('test_neg.txt', 'a') as file:
+    #     for edge in test_neg:
+    #         file.write(str(edge))
+    #         file.write('\n')
+    # exit(0)
+    # _ = create_train_test_splits_3rd_way(train_graph, test_pos, nx_G)
+    # 6498
+    # 92792
+    # 244716
+    # 5182
+    # 117219
+    # 116752
+    # 6556
+    # with open('/home/sotiris/Desktop/phrases_correct_N2V', 'r') as file:
+    #     phrases = file.readlines()
+    # how_many = 0
+    # for phr in phrases:
+    #     tupl = phr.split('@@')
+    #     tupl0 = tupl[0].strip()
+    #     tupl1 = tupl[1].strip()
+    #     id0 = phrase_dic[tupl0]
+    #     id1 = phrase_dic[tupl1]
+    #     path = nx.shortest_path_length(train_graph, id0, id1)
+    #     if path <= 5:
+    #         print(tupl0, "@@@@", tupl1)
+    #         how_many += 1
+    # how_many = 0
+    # max_len = 0
+    #
+    # for edge in test_pos:
+    #     path = nx.shortest_path_length(train_graph, edge[0], edge[1])
+    #     if path > max_len:
+    #         max_len = path
+    # print(max_len)
+    # print(how_many)
+    # exit(0)
+    # print(nx.shortest_path_length(nx_G, 6498, 117219))
+    # print(nx.shortest_path_length(nx_G, 6498, 116752))
+    # print(nx.shortest_path_length(nx_G, 6498, 6556))
     # exit()
 
     print(
         'Train graph created: {} nodes, {} edges'.format(train_graph.number_of_nodes(), train_graph.number_of_edges()))
     print('Number of connected components: ', nx.number_connected_components(train_graph))
+    # exit(0)
     # print("Created new Dataset..")
+    # 6338 11795   15391 12676  13298 3640
+    # print(phrase_dic[11795], phrase_dic[6338])
+    # print(nx.shortest_path_length(train_graph, 26409, 39417))
+    # exit(0)
+    # with open('/home/sotiris/Desktop/nodes_error', 'r') as file:
+    #     nodes = file.readlines()
+    # how_many = 0
+    # for node in nodes:
+    #     n = node.split()
+    #     length = nx.shortest_path_length(train_graph, int(n[0]), int(n[1]))
+    #     if length >= 10:
+    #         how_many += 1
+    # print(how_many)
+    # print(len(nodes))
     # exit(0)
     if config.train:
         if config.resume_training:

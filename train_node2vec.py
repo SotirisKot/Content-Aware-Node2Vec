@@ -1,3 +1,4 @@
+import collections
 from pprint import pprint
 import torch
 import re
@@ -140,7 +141,7 @@ def load_embeddings(file):
             word = line[0]
             embedding = [float(x) for x in line[1:]]
             assert len(embedding) == 30
-            node_embeddings[word] = embedding
+            node_embeddings[int(word)] = embedding
     return node_embeddings
 
 
@@ -602,18 +603,24 @@ def cos_sim(a, b):
 
 
 def get_auc(test_pos, phrase_dic, node_embeddings=None, test_neg_st=None):
-    ###
     node2vec = {}
-    if config.model == 'average':
-        for idx, phrase in phrase_dic.items():
-            node2vec[idx] = get_average_embedding(phrase, node_embeddings)
-    else:
-        node2vec = node_embeddings
     ###
+    # if config.model == 'average':
+    #     for idx, phrase in phrase_dic.items():
+    #         node2vec[idx] = get_average_embedding(phrase, node_embeddings)
+    # else:
+    #     node2vec = node_embeddings
+    ###
+    f = open('/home/sotiris/Desktop/CANE_embeds/isa_{0.3,1,1}.txt', 'rb')
+    for i, j in enumerate(f):
+        if j.decode() != '\n':
+            node2vec[i] = list(map(float, j.strip().decode().split(' ')))
+
     edges = [i for i in test_pos]
     nodes = list(set([i for j in edges for i in j]))
     a = 0
     b = 0
+    errors = 0
     if test_neg_st is None:
         for i, j in edges:
             if i in node2vec.keys() and j in node2vec.keys():
@@ -626,6 +633,19 @@ def get_auc(test_pos, phrase_dic, node_embeddings=None, test_neg_st=None):
                     a += 1
                 elif dot1 == dot2:
                     a += 0.5
+                else:
+                    print("Error at positive edge: {} ---- {}".format(phrase_dic[i], phrase_dic[random_node]))
+                    # phr1 = " ".join(phrase_dic[i])
+                    # phr2 = " ".join(phrase_dic[j])
+                    # if phr1 == 'granulocyte' and phr2 == 'basophil':
+                    #     print(cos_sim(node2vec[i], node2vec[j]))
+                    #     exit(0)
+                    # with open('/home/sotiris/Desktop/phrases_error_1', 'a') as write_file:
+                    #     phr1 = " ".join(phrase_dic[i])
+                    #     phr2 = " ".join(phrase_dic[j])
+                    #     write_file.write(phr1 + "@@" + phr2)
+                    #     write_file.write('\n')
+                    errors += 1
                 b += 1
     else:
         for i, j in edges:
@@ -639,11 +659,33 @@ def get_auc(test_pos, phrase_dic, node_embeddings=None, test_neg_st=None):
                                 a += 1
                             elif dot1 == dot2:
                                 a += 0.5
+                            else:
+                                # print("Error at positive edge: {} ---- {}".format(phrase_dic[i], phrase_dic[edge[1]]))
+                                phr1 = " ".join(phrase_dic[i])
+                                phr2 = " ".join(phrase_dic[j])
+                                if phr1 == 'intercellular matrix':
+                                    print(phr1, "@@@@@@", phr2)
+                                    print(phrase_dic[edge[1]])
+                                    print(cos_sim(node2vec[i], node2vec[j]))
+                                    exit(0)
+                                # with open('/home/sotiris/Desktop/phrases_error_og_pos_N2V', 'a') as write_file:
+                                #     phr1 = " ".join(phrase_dic[i])
+                                #     phr2 = " ".join(phrase_dic[j])
+                                #     write_file.write(phr1 + "@@" + phr2)
+                                #     write_file.write('\n')
+                                errors += 1
                             b += 1
                             test_neg_st.remove(edge)
                             break
             else:
-                print(i, j)
+                print("Don't exist: ", i, j)
+            # print(a)
+            # print(b)
+            # print("Auc value:", (float(a) / b))
+            # print("Total errors: ", errors)
+            # print(len(test_neg_st))
+
     print(a)
     print(b)
     print("Auc value:", (float(a) / b))
+    print("Total errors: ", errors)
