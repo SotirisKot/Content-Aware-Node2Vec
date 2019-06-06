@@ -4,7 +4,7 @@ neg_samples = 2
 dimensions = 30
 walk_length = 40
 num_walks = 10
-window_size = 5
+window_size = 10
 p = 1
 q = 1
 n_layers = 1
@@ -41,7 +41,7 @@ checkpoint_name = 'checkpoint_epoch_1.pth.tar'
 
 """
 
-isa settings: walk_len = 40, num_walks = 5, window_size = 5
-part_of settings: walk_len = 40 , num_walks = 10, window_size = 5
+isa settings: walk_len = 40, num_walks = 5, window_size = 10
+part_of settings: walk_len = 40 , num_walks = 10, window_size = 10
 
 """
