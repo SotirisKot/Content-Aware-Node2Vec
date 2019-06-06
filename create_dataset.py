@@ -202,7 +202,7 @@ def return_parents(graph, node, hops=None):
     return list(graph.predecessors(node)), hops
 
 
-def create_train_test_splits_hard(graph, percent_pos, percent_neg):
+def create_train_test_splits_hard(graph, num_negative_test, num_negative_train):
 
     # This method creates the train,test splits...from the dataset
     # we remove some percentage of the existing edges(ensuring the graph remains connected)
@@ -212,15 +212,9 @@ def create_train_test_splits_hard(graph, percent_pos, percent_neg):
     np.random.seed(0)
     num_nodes = graph.number_of_nodes()
     num_edges = graph.number_of_edges()
-    num_pos_train_edges = int(num_edges * percent_pos)
-    num_neg_train_edges = int(num_edges * percent_neg)
-    num_pos_test_edges = num_edges - num_pos_train_edges
-    num_neg_test_edges = num_edges - num_neg_train_edges
     all_edges = [edge for edge in graph.edges]
     all_nodes = [node for node in graph.nodes]
     all_edges_set = set(all_edges)  # for quick access
-    train_edges = set(all_edges)
-    test_edges = set()
     # counter1 = 0
     # counter2 = 0
     if not graph.is_directed():
@@ -235,7 +229,7 @@ def create_train_test_splits_hard(graph, percent_pos, percent_neg):
     # to generate this type of negative examples we must convert the graph to directed
     print('Creating negative test samples..')
     test_false_edges = set()
-    while len(test_false_edges) < num_neg_test_edges:
+    while len(test_false_edges) < num_negative_test:
         for node in tqdm(all_nodes):
             hop = 1
             parents = []
@@ -292,7 +286,7 @@ def create_train_test_splits_hard(graph, percent_pos, percent_neg):
                 if sampled_edge in test_false_edges or sampled_edge_rev in test_false_edges:
                     continue
                 # everything is ok so we add the fake edge to the test_set
-                if len(test_false_edges) == num_neg_test_edges:
+                if len(test_false_edges) == num_negative_test:
                     # we generated all the false edges we wanted
                     break
                 else:
@@ -303,7 +297,7 @@ def create_train_test_splits_hard(graph, percent_pos, percent_neg):
     # do the same for the train_set
     print('Creating negative training samples...')
     train_false_edges = set()
-    while len(train_false_edges) < num_neg_train_edges:
+    while len(train_false_edges) < num_negative_train:
         for node in tqdm(all_nodes):
             hop = 1
             parents = []
@@ -362,7 +356,7 @@ def create_train_test_splits_hard(graph, percent_pos, percent_neg):
                 if sampled_edge in train_false_edges or sampled_edge_rev in train_false_edges:
                     continue
                 # everything is ok so we add the fake edge to the test_set
-                if len(train_false_edges) == num_neg_train_edges:
+                if len(train_false_edges) == num_negative_train:
                     break
                 else:
                     train_false_edges.add(sampled_edge)
@@ -403,12 +397,9 @@ def create_train_test_splits_hard(graph, percent_pos, percent_neg):
     assert test_false_edges.isdisjoint(all_edges_set)
     assert train_false_edges.isdisjoint(all_edges_set)
     assert test_false_edges.isdisjoint(train_false_edges)
-    assert test_edges.isdisjoint(train_edges)
 
     # convert them back to lists and return them
-    train_pos = list(train_edges)
     train_neg = list(train_false_edges)
-    test_pos = list(test_edges)
     test_neg = list(test_false_edges)
 
     odir = 'datasets/{}_hard_splits'.format(dataset)
@@ -416,17 +407,13 @@ def create_train_test_splits_hard(graph, percent_pos, percent_neg):
         os.makedirs(odir)
 
     # save the splits
-    with open("{}.p".format(os.path.join(odir, '{}_train_pos'.format(dataset))), 'wb') as dump_file:
-        pickle.dump(train_pos, dump_file)
     with open("{}.p".format(os.path.join(odir, '{}_train_neg'.format(dataset))), 'wb') as dump_file:
         pickle.dump(train_neg, dump_file)
-    with open("{}.p".format(os.path.join(odir, '{}_test_pos'.format(dataset))), 'wb') as dump_file:
-        pickle.dump(test_pos, dump_file)
     with open("{}.p".format(os.path.join(odir, '{}_test_neg'.format(dataset))), 'wb') as dump_file:
         pickle.dump(test_neg, dump_file)
 
     nx.write_edgelist(graph, os.path.join(odir, '{}_train_graph.edgelist'.format(dataset)))
-    return train_pos, train_neg, test_pos, test_neg
+    return train_neg, test_neg
 
 
 args = parse_args()
