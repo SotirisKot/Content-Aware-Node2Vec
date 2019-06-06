@@ -17,7 +17,7 @@ torch.manual_seed(my_seed)
 torch.cuda.manual_seed(my_seed)
 
 '''OUTPUT DIR'''
-output_dir = config.output_dir
+output_dir = config.checkpoint_dir
 
 '''
 Initialization of the logger
@@ -279,14 +279,12 @@ class GRUEncoder(nn.Module):
         self.dropout = config.dropout
         self.scale = scale
         self.max_norm = max_norm
-        # self.dropout = nn.Dropout(config.dropout)
-        # self.h0 = nn.Parameter(torch.randn(1, 1, self.rnn_size).uniform_(-self.scale, self.scale))
         self.the_rnn = nn.GRU(input_size=self.embedding_dim,
                               hidden_size=config.hidden_size,
                               num_layers=self.nlayers,
                               bidirectional=self.bidirectional,
                               bias=True,
-                              dropout=0.0,
+                              dropout=self.dropout,
                               batch_first=True)
 
         self.init_weights(self.scale)
@@ -486,9 +484,9 @@ class GRUEncoder(nn.Module):
         phr_emb_u = self.u_embeddings(phr)
         phr_emb_v = self.v_embeddings(phr)
         ###
-        if config.gru_encoder == '1':
-            phr_emb_u, _ = self.encode(phr_emb_u, phr_lengths, phr_perm)
-            phr_emb_v, _ = self.encode(phr_emb_v, phr_lengths, phr_perm)
+        if config.gru_encoder == 1:
+            phr_emb_u = self.encode(phr_emb_u, phr_lengths, phr_perm)
+            phr_emb_v = self.encode(phr_emb_v, phr_lengths, phr_perm)
             if concat:
                 phr_emb = torch.cat((phr_emb_u, phr_emb_v), dim=1)
             else:

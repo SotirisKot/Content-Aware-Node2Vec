@@ -25,7 +25,7 @@ class Utils(object):
             self.frequencies, self.word2idx, self.idx2word = self.build_dataset(self.walks)
             self.vocabulary_size = len(self.word2idx)
             print("Total words: ", self.vocabulary_size)
-            # the sample_table it is used for negative sampling as they do in the original word2vec
+            # the sample_table is used for negative sampling
             self.sample_table = self.create_sample_table()
 
     def build_word_vocab(self, walks):

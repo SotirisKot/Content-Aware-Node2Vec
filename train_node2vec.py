@@ -132,6 +132,26 @@ def get_average_embedding(phrase, node_embeddings):
     return average_embedding
 
 
+def get_cos_embedding(edge_list, node_embeddings, phrase_dic):
+    if config.model == 'average':
+        cos_embeddings = []
+        for edge in edge_list:
+            emb_node1 = get_average_embedding(phrase_dic[edge[0]], node_embeddings)
+            emb_node2 = get_average_embedding(phrase_dic[edge[1]], node_embeddings)
+            cos = cos_sim(emb_node1, emb_node2)
+            cos_embeddings.append(cos)
+    else:
+        cos_embeddings = []
+        for edge in edge_list:
+            if edge[0] in node_embeddings and edge[1] in node_embeddings:
+                emb_node1 = node_embeddings[edge[0]]
+                emb_node2 = node_embeddings[edge[1]]
+                cos = cos_sim(emb_node1, emb_node2)
+                cos_embeddings.append(cos)
+    cos_embeddings = np.array(cos_embeddings)
+    return cos_embeddings
+
+
 def load_embeddings(file):
     node_embeddings = {}
     with codecs.open("{}".format(file), 'r', 'utf-8') as embeddings:
@@ -141,7 +161,7 @@ def load_embeddings(file):
             word = line[0]
             embedding = [float(x) for x in line[1:]]
             assert len(embedding) == 30
-            node_embeddings[int(word)] = embedding
+            node_embeddings[word] = embedding
     return node_embeddings
 
 
@@ -332,8 +352,58 @@ class Node2Vec:
         else:
             node_embeddings = load_embeddings(embeddings_file)
 
-        if config.evaluate_standard:
-            get_auc(test_pos, phrase_dic, node_embeddings=node_embeddings, test_neg_st=test_neg)
+        node2vec = {}
+        f = open('/home/sotiris/Desktop/CANE_embeds/part_of_{0.2,1.0,1.0}_embed.txt', 'rb')
+        for i, j in enumerate(f):
+            if j.decode() != '\n':
+                node2vec[i] = list(map(float, j.strip().decode().split(' ')))
+        node_embeddings = node2vec
+
+        if config.evaluate_cosine:
+            # if not config.evaluate_hard:
+            # first calculate the cosine similarity for every edge in test_pos and in test_neg
+            cosine_test_pos = get_cos_embedding(test_pos, node_embeddings, phrase_dic)
+            cosine_test_neg = get_cos_embedding(test_neg, node_embeddings, phrase_dic)
+            print(len(cosine_test_pos))
+            print(len(cosine_test_neg))
+
+            # turn negative values to zeros
+            cosine_test_pos[cosine_test_pos < 0] = 0
+            cosine_test_neg[cosine_test_neg < 0] = 0
+
+            # the predictions are the cosine similarities and we also create the labels.
+            test_preds = np.concatenate([cosine_test_pos, cosine_test_neg])
+            test_labels = np.zeros(test_preds.shape[0])
+            test_labels[:cosine_test_pos.shape[0]] = 1
+
+            test_auc = roc_auc_score(test_labels, test_preds)
+            print('node2vec Test AUC score: ', str(test_auc))
+            # else:
+            #     # test_pos_cleaned = []
+            #     # for edge in tqdm(test_pos):
+            #     #     for edge_neg in test_neg:
+            #     #         if edge[0] == edge_neg[0]:
+            #     #             test_pos_cleaned.append(edge)
+            #     #             test_neg.remove(edge_neg)
+            #     #             break
+            #     #
+            #     # test_neg = pickle.load(open(config.test_neg, 'rb'))
+            #     cosine_test_pos = get_cos_embedding(test_pos, node_embeddings)
+            #     cosine_test_neg = get_cos_embedding(test_neg, node_embeddings)
+            #     print(len(cosine_test_pos))
+            #     print(len(cosine_test_neg))
+            #
+            #     # turn negative values to zeros
+            #     cosine_test_pos[cosine_test_pos < 0] = 0
+            #     cosine_test_neg[cosine_test_neg < 0] = 0
+            #
+            #     # the predictions are the cosine similarities and we also create the labels.
+            #     test_preds = np.concatenate([cosine_test_pos, cosine_test_neg])
+            #     test_labels = np.zeros(test_preds.shape[0])
+            #     test_labels[:cosine_test_pos.shape[0]] = 1
+            #
+            #     test_auc = roc_auc_score(test_labels, test_preds)
+            #     print('node2vec Test AUC score: ', str(test_auc))
 
         if config.evaluate_lr:
 
@@ -350,13 +420,10 @@ class Node2Vec:
             test_pos_edge_embs = get_edge_embeddings(test_pos, node_embeddings, self.model_type, phrase_dic)
             test_neg_edge_embs = get_edge_embeddings(test_neg, node_embeddings, self.model_type, phrase_dic)
             test_set = np.concatenate([test_pos_edge_embs, test_neg_edge_embs])
-            test_set_phrases = np.concatenate([test_pos, test_neg])
 
             # labels: 1-> link exists, 0-> false edge
             test_labels = np.zeros(len(test_set))
             test_labels[:len(test_pos_edge_embs)] = 1
-            test_labels_phrases = np.zeros(len(test_set_phrases))
-            test_labels_phrases[:len(test_pos)] = 1
 
             # train the classifier and evaluate in the test set
             # shuffle train set
@@ -369,16 +436,13 @@ class Node2Vec:
             idx_list = [i for i in range(len(test_labels))]
             shuffle(idx_list)
             test_set = test_set[idx_list]
-            test_set_phrases = test_set_phrases[idx_list]
             test_labels = test_labels[idx_list]
-            test_labels_phrases = test_labels_phrases[idx_list]
 
             classifier = LogisticRegression()
             classifier.fit(train_set, train_labels)
 
             # evaluate
             test_preds = classifier.predict_proba(test_set)
-            create_confusion_matrix(test_preds, phrase_dic, test_labels_phrases, test_set_phrases)
             false_positive_rate, true_positive_rate, thresholds = roc_curve(test_labels, test_preds[:, 1])
             average_precision = average_precision_score(test_labels, test_preds[:, 1])
             test_auc = auc(false_positive_rate, true_positive_rate)
@@ -429,16 +493,16 @@ class Node2Vec:
                 phrases = [phrase_dic[key] for key in batch]
                 phr = [phr2idx(phrase, word2idx) for phrase in phrases]
                 phrase_emb, idx_u, idx_v = model(phr)
-
+                # phrase_emb = model(phr)
                 ###  create weights for visualizing the words that are getting pooled more often
-                json_list_u = create_pooling_weights_for_batch(idx_u, phrase_dic, batch)
-                json_list_v = create_pooling_weights_for_batch(idx_v, phrase_dic, batch)
-                # # # json_list = create_attention_weights_for_batch(idx_u, phrase_dic, batch)
-                for triplet in json_list_u:
-                    json_list_triplet_u.append(triplet)
-
-                for triplet in json_list_v:
-                    json_list_triplet_v.append(triplet)
+                # json_list_u = create_pooling_weights_for_batch(idx_u, phrase_dic, batch)
+                # json_list_v = create_pooling_weights_for_batch(idx_v, phrase_dic, batch)
+                # # # # json_list = create_attention_weights_for_batch(idx_u, phrase_dic, batch)
+                # for triplet in json_list_u:
+                #     json_list_triplet_u.append(triplet)
+                #
+                # for triplet in json_list_v:
+                #     json_list_triplet_v.append(triplet)
                 ###
 
                 for idx, phr_id in enumerate(batch):
@@ -600,92 +664,3 @@ def cos_sim(a, b):
     norm_a = np.linalg.norm(a)
     norm_b = np.linalg.norm(b)
     return dot_product / (norm_a * norm_b)
-
-
-def get_auc(test_pos, phrase_dic, node_embeddings=None, test_neg_st=None):
-    node2vec = {}
-    ###
-    # if config.model == 'average':
-    #     for idx, phrase in phrase_dic.items():
-    #         node2vec[idx] = get_average_embedding(phrase, node_embeddings)
-    # else:
-    #     node2vec = node_embeddings
-    ###
-    f = open('/home/sotiris/Desktop/CANE_embeds/isa_{0.3,1,1}.txt', 'rb')
-    for i, j in enumerate(f):
-        if j.decode() != '\n':
-            node2vec[i] = list(map(float, j.strip().decode().split(' ')))
-
-    edges = [i for i in test_pos]
-    nodes = list(set([i for j in edges for i in j]))
-    a = 0
-    b = 0
-    errors = 0
-    if test_neg_st is None:
-        for i, j in edges:
-            if i in node2vec.keys() and j in node2vec.keys():
-                dot1 = np.dot(node2vec[i], node2vec[j])
-                random_node = random.sample(nodes, 1)[0]
-                while random_node == j or random_node not in node2vec.keys():
-                    random_node = random.sample(nodes, 1)[0]
-                dot2 = np.dot(node2vec[i], node2vec[random_node])
-                if dot1 > dot2:
-                    a += 1
-                elif dot1 == dot2:
-                    a += 0.5
-                else:
-                    print("Error at positive edge: {} ---- {}".format(phrase_dic[i], phrase_dic[random_node]))
-                    # phr1 = " ".join(phrase_dic[i])
-                    # phr2 = " ".join(phrase_dic[j])
-                    # if phr1 == 'granulocyte' and phr2 == 'basophil':
-                    #     print(cos_sim(node2vec[i], node2vec[j]))
-                    #     exit(0)
-                    # with open('/home/sotiris/Desktop/phrases_error_1', 'a') as write_file:
-                    #     phr1 = " ".join(phrase_dic[i])
-                    #     phr2 = " ".join(phrase_dic[j])
-                    #     write_file.write(phr1 + "@@" + phr2)
-                    #     write_file.write('\n')
-                    errors += 1
-                b += 1
-    else:
-        for i, j in edges:
-            if i in node2vec.keys() and j in node2vec.keys():
-                dot1 = np.dot(node2vec[i], node2vec[j])
-                for edge in test_neg_st:
-                    if edge[0] == i:
-                        if edge[1] in node2vec.keys():
-                            dot2 = np.dot(node2vec[i], node2vec[edge[1]])
-                            if dot1 > dot2:
-                                a += 1
-                            elif dot1 == dot2:
-                                a += 0.5
-                            else:
-                                # print("Error at positive edge: {} ---- {}".format(phrase_dic[i], phrase_dic[edge[1]]))
-                                phr1 = " ".join(phrase_dic[i])
-                                phr2 = " ".join(phrase_dic[j])
-                                if phr1 == 'intercellular matrix':
-                                    print(phr1, "@@@@@@", phr2)
-                                    print(phrase_dic[edge[1]])
-                                    print(cos_sim(node2vec[i], node2vec[j]))
-                                    exit(0)
-                                # with open('/home/sotiris/Desktop/phrases_error_og_pos_N2V', 'a') as write_file:
-                                #     phr1 = " ".join(phrase_dic[i])
-                                #     phr2 = " ".join(phrase_dic[j])
-                                #     write_file.write(phr1 + "@@" + phr2)
-                                #     write_file.write('\n')
-                                errors += 1
-                            b += 1
-                            test_neg_st.remove(edge)
-                            break
-            else:
-                print("Don't exist: ", i, j)
-            # print(a)
-            # print(b)
-            # print("Auc value:", (float(a) / b))
-            # print("Total errors: ", errors)
-            # print(len(test_neg_st))
-
-    print(a)
-    print(b)
-    print("Auc value:", (float(a) / b))
-    print("Total errors: ", errors)
