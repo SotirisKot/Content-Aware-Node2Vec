@@ -355,7 +355,7 @@ def create_train_test_splits_hard(graph, num_negative_test, num_negative_train):
                     continue
                 if sampled_edge in train_false_edges or sampled_edge_rev in train_false_edges:
                     continue
-                # everything is ok so we add the fake edge to the test_set
+                # everything is ok so we add the fake edge to the train_set
                 if len(train_false_edges) == num_negative_train:
                     break
                 else:
@@ -445,8 +445,9 @@ print('Number of negative testing samples: ', len(test_neg_easy))
 #############################################################################
 # there is no point of creating positive train/test edges..because the same edges will be removed from the graph..since we keep it connected
 # sample the same amount of hard negatives with the positives: len(train_pos) == len(train_hard_neg) etc.
-
-train_neg_hard, test_neg_hard = create_train_test_splits_hard(original_graph, percent_pos, percent_neg)
+num_neg_test = len(test_pos_easy)
+num_neg_train = len(train_pos_easy)
+train_neg_hard, test_neg_hard = create_train_test_splits_hard(original_graph, num_neg_test, num_neg_train)
 
 print('Hard dataset created for the {} dataset.'.format(dataset))
 print('Number of positive training samples: ', len(train_pos_easy))
