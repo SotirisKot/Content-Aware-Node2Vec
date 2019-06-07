@@ -501,7 +501,7 @@ class Node2Vec:
                 #### create html file with the heatmap of each phrase
                 plot_attention(json_list_triplet_u, json_list_triplet_v, 'heatmaps.html')
                 ####
-                
+
             return node_embeddings
 
 
