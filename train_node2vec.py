@@ -77,7 +77,8 @@ def print_params(model):
     print(40 * '=')
 
 
-output_dir = '/home/sotiris/Documents/logger/'
+'''OUTPUT DIR'''
+output_dir = config.checkpoint_dir
 
 
 def init_logger(handler):
@@ -122,13 +123,14 @@ def get_edge_embeddings(edge_list, node_embeddings, model_type, phrase_dic):
 
 def get_average_embedding(phrase, node_embeddings):
     length = len(phrase)
+    sum_emb = 0
     for idx, word in enumerate(phrase):
         if idx == 0:
-            sum = node_embeddings[word]
+            sum_emb = node_embeddings[word]
         else:
-            sum = np.add(sum, node_embeddings[word])
+            sum_emb = np.add(sum_emb, node_embeddings[word])
 
-    average_embedding = np.divide(sum, float(length))
+    average_embedding = np.divide(sum_emb, float(length))
     return average_embedding
 
 
@@ -186,6 +188,12 @@ class Node2Vec:
         self.model_type = config.model
         self.wv = {}
 
+        if not os.path.exists(self.odir_checkpoint):
+            os.makedirs(self.odir_checkpoint)
+
+        if not os.path.exists(self.odir_embeddings):
+            os.makedirs(self.odir_embeddings)
+
     def train(self):
         # initialize the model
         if self.model_type == 'rnn':
@@ -195,16 +203,12 @@ class Node2Vec:
                                       self.neg_sample_num,
                                       self.batch_size,
                                       self.window_size)
-        elif self.model_type == 'average':
+        else:
             model = models.AverageNode2Vec(self.vocabulary_size,
                                            self.embedding_dim,
                                            self.neg_sample_num,
                                            self.batch_size,
                                            self.window_size)
-        else:
-            model = models.BaselineNode2Vec(self.vocabulary_size,
-                                            self.embedding_dim)
-
         print_params(model)
         params = model.parameters()
         if use_cuda:
@@ -289,9 +293,6 @@ class Node2Vec:
                              'batch_num': batch_num,
                              'loss': loss.cpu().item()}
 
-                    if not os.path.exists(self.odir_checkpoint):
-                        os.makedirs(self.odir_checkpoint)
-
                     save_checkpoint(state,
                                     filename=self.odir_checkpoint + '{}_checkpoint_batch_{}.pth.tar'.format(
                                         config.dataset_name,
@@ -356,20 +357,10 @@ class Node2Vec:
         else:
             node_embeddings = load_embeddings(embeddings_file)
 
-        node2vec = {}
-        f = open('/home/sotiris/Desktop/CANE_embeds/part_of_{0.2,1.0,1.0}_embed.txt', 'rb')
-        for i, j in enumerate(f):
-            if j.decode() != '\n':
-                node2vec[i] = list(map(float, j.strip().decode().split(' ')))
-        node_embeddings = node2vec
-
         if config.evaluate_cosine:
-            # if not config.evaluate_hard:
             # first calculate the cosine similarity for every edge in test_pos and in test_neg
             cosine_test_pos = get_cos_embedding(test_pos, node_embeddings, phrase_dic)
             cosine_test_neg = get_cos_embedding(test_neg, node_embeddings, phrase_dic)
-            print(len(cosine_test_pos))
-            print(len(cosine_test_neg))
 
             # turn negative values to zeros
             cosine_test_pos[cosine_test_pos < 0] = 0
@@ -382,32 +373,6 @@ class Node2Vec:
 
             test_auc = roc_auc_score(test_labels, test_preds)
             print('node2vec Test AUC score: ', str(test_auc))
-            # else:
-            #     # test_pos_cleaned = []
-            #     # for edge in tqdm(test_pos):
-            #     #     for edge_neg in test_neg:
-            #     #         if edge[0] == edge_neg[0]:
-            #     #             test_pos_cleaned.append(edge)
-            #     #             test_neg.remove(edge_neg)
-            #     #             break
-            #     #
-            #     # test_neg = pickle.load(open(config.test_neg, 'rb'))
-            #     cosine_test_pos = get_cos_embedding(test_pos, node_embeddings)
-            #     cosine_test_neg = get_cos_embedding(test_neg, node_embeddings)
-            #     print(len(cosine_test_pos))
-            #     print(len(cosine_test_neg))
-            #
-            #     # turn negative values to zeros
-            #     cosine_test_pos[cosine_test_pos < 0] = 0
-            #     cosine_test_neg[cosine_test_neg < 0] = 0
-            #
-            #     # the predictions are the cosine similarities and we also create the labels.
-            #     test_preds = np.concatenate([cosine_test_pos, cosine_test_neg])
-            #     test_labels = np.zeros(test_preds.shape[0])
-            #     test_labels[:cosine_test_pos.shape[0]] = 1
-            #
-            #     test_auc = roc_auc_score(test_labels, test_preds)
-            #     print('node2vec Test AUC score: ', str(test_auc))
 
         if config.evaluate_lr:
             test_neg = pickle.load(open(config.test_neg, 'rb'))
@@ -453,6 +418,8 @@ class Node2Vec:
             print('node2vec Test ROC score: ', str(test_roc))
             print('node2vec Test AUC score: ', str(test_auc))
             print('node2vec Test AP score: ', str(average_precision))
+
+            # plotting
             # precision, recall, _ = precision_recall_curve(test_labels, test_preds[:, 1])
             #
             # plt.step(recall, precision, color='b', alpha=0.2,
@@ -495,18 +462,22 @@ class Node2Vec:
                 batch = keys[phridx:phridx + self.batch_size]
                 phrases = [phrase_dic[key] for key in batch]
                 phr = [phr2idx(phrase, word2idx) for phrase in phrases]
-                phrase_emb, idx_u, idx_v = model(phr)
-                # phrase_emb = model(phr)
-                ###  create weights for visualizing the words that are getting pooled more often
-                # json_list_u = create_pooling_weights_for_batch(idx_u, phrase_dic, batch)
-                # json_list_v = create_pooling_weights_for_batch(idx_v, phrase_dic, batch)
-                # # # # json_list = create_attention_weights_for_batch(idx_u, phrase_dic, batch)
-                # for triplet in json_list_u:
-                #     json_list_triplet_u.append(triplet)
-                #
-                # for triplet in json_list_v:
-                #     json_list_triplet_v.append(triplet)
-                ###
+
+                if config.gru_encoder != 1:
+                    phrase_emb, idx_u, idx_v = model(phr)
+                    if config.plot_heatmaps:
+                        ###  create weights for visualizing the words that are getting pooled more often
+                        json_list_u = create_pooling_weights_for_batch(idx_u, phrase_dic, batch)
+                        json_list_v = create_pooling_weights_for_batch(idx_v, phrase_dic, batch)
+                        # # # json_list = create_attention_weights_for_batch(idx_u, phrase_dic, batch)
+                        for triplet in json_list_u:
+                            json_list_triplet_u.append(triplet)
+
+                        for triplet in json_list_v:
+                            json_list_triplet_v.append(triplet)
+                        ###
+                else:
+                    phrase_emb = model(phr)
 
                 for idx, phr_id in enumerate(batch):
                     phrase = phrase_dic[phr_id]
@@ -526,12 +497,11 @@ class Node2Vec:
             with open("{}.p".format('node_embeddings_phrases'), 'wb') as dump_file:
                 pickle.dump(node_embeddings_phrases, dump_file)
 
-            # with open("json_pooling_weights.json", 'w') as fp:
-            #     json.dump(json_list_ultra, fp)
-
-            #### create html file with the heatmap of each phrase
-            plot_attention(json_list_triplet_u, json_list_triplet_v, 'heatmaps.html')
-            ####
+            if config.plot_heatmaps:
+                #### create html file with the heatmap of each phrase
+                plot_attention(json_list_triplet_u, json_list_triplet_v, 'heatmaps.html')
+                ####
+                
             return node_embeddings
 
 

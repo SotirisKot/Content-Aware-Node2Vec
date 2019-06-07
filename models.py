@@ -21,25 +21,25 @@ output_dir = config.checkpoint_dir
 
 '''
 Initialization of the logger
-
+Uncomment and use the logger
 '''
 
-handler = None
-
-
-def init_logger(handler):
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    od = output_dir.split('/')[-1]
-    logger = logging.getLogger(od)
-    if handler is not None:
-        logger.removeHandler(handler)
-    handler = logging.FileHandler(os.path.join(output_dir, 'model.log'))
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
-    return logger, handler
+# handler = None
+#
+#
+# def init_logger(handler):
+#     if not os.path.exists(output_dir):
+#         os.makedirs(output_dir)
+#     od = output_dir.split('/')[-1]
+#     logger = logging.getLogger(od)
+#     if handler is not None:
+#         logger.removeHandler(handler)
+#     handler = logging.FileHandler(os.path.join(output_dir, 'model.log'))
+#     formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+#     handler.setFormatter(formatter)
+#     logger.addHandler(handler)
+#     logger.setLevel(logging.INFO)
+#     return logger, handler
 
 
 '''
@@ -168,8 +168,6 @@ class AverageNode2Vec(nn.Module):
             e = ' '.join(map(lambda x: str(x), e))
             fout.write('%s %s\n' % (w, e))
 
-        with open("{}.p".format(os.path.join(file_name, 'isa_word_embeds_dict')), 'wb') as dump_file:
-            pickle.dump(wv, dump_file)
         return wv
 
 
@@ -198,8 +196,7 @@ class GRUEncoder(nn.Module):
         self.bidirectional = config.bidirectional
         self.max_pad = config.max_pad
         self.gru_encoder = config.gru_encoder
-        self.logger, self.handler = init_logger(handler)
-        self.pool_type = config.pool_type
+        # self.logger, self.handler = init_logger(handler)
 
         if self.gru_encoder == 3:
             self.attention = SelfAttention(self.hidden_size)
@@ -309,7 +306,7 @@ class GRUEncoder(nn.Module):
             # unsort hidden and return last timesteps
             hn = unsort(hn, perm_idx, 0)
 
-            return hn
+            return hn, None
         elif self.gru_encoder == 2:
             # Handling padding in Recurrent Networks
             gru_input = pack_padded_sequence(inp, seq_lens.data.cpu().numpy(), batch_first=True)
@@ -403,9 +400,6 @@ class GRUEncoder(nn.Module):
                                                         neg_perm)
             loss = self.get_loss(phr, pos, neg)
 
-            if loss >= 10:
-                self.logger.info("Loss exploded: LOSS: {}, \n phr_rnn: {} ,\n pos_rnn: {} ,\n neg_rnn: {} \n".format(loss, phr, pos, neg))
-
             return loss
         else:  # here it is used for inference---> you can encode one sentence or a batch
             emb = self.inference(phr_inds, concat=True)
@@ -418,8 +412,9 @@ class GRUEncoder(nn.Module):
         phr_emb_v = self.v_embeddings(phr)
         ###
         if config.gru_encoder == 1:
-            phr_emb_u = self.encode(phr_emb_u, phr_lengths, phr_perm)
-            phr_emb_v = self.encode(phr_emb_v, phr_lengths, phr_perm)
+            phr_emb_u, _ = self.encode(phr_emb_u, phr_lengths, phr_perm)
+            phr_emb_v, _ = self.encode(phr_emb_v, phr_lengths, phr_perm)
+
             if concat:
                 phr_emb = torch.cat((phr_emb_u, phr_emb_v), dim=1)
             else:
@@ -428,6 +423,7 @@ class GRUEncoder(nn.Module):
         else:
             phr_emb_u, idx_u = self.encode(phr_emb_u, phr_lengths, phr_perm)
             phr_emb_v, idx_v = self.encode(phr_emb_v, phr_lengths, phr_perm)
+
             if concat:
                 phr_emb = torch.cat((phr_emb_u, phr_emb_v), dim=1)
             else:
