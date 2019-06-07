@@ -89,6 +89,7 @@ def read_graph(file, get_connected_graph=True, remove_selfloops=True, get_direct
 def learn_embeddings(walks, train_pos=None, train_neg=None, test_pos=None, test_neg=None, eval_bool=False, embeddings_file=None, checkpoint_file=None):
     if not eval_bool:
         print('Creating walk corpus..')
+        exit()
         model = Node2Vec(walks=walks, output_file=args.output, walk_length=args.walk_length,
                          embedding_dim=args.dimensions,
                          epochs=args.iter, batch_size=config.batch_size, window_size=args.window_size, neg_sample_num=config.neg_samples)
@@ -141,51 +142,6 @@ def main(args):
     test_pos = pickle.load(open(config.test_pos, 'rb'))
     train_neg = pickle.load(open(config.train_neg, 'rb'))
     test_neg = pickle.load(open(config.test_neg, 'rb'))
-
-    # #
-    # val_pos = test_pos[:5000]
-    # val_neg = test_neg[:5000]
-    # splitted_test_pos = test_pos[5000:]
-    # splitted_test_neg = test_neg[5000:]
-    #
-    # print(len(val_pos))
-    # print(len(val_neg))
-    # val_pos = set(val_pos)
-    # val_neg = set(val_neg)
-    # print(len(val_pos))
-    # print(len(val_neg))
-    #
-    # print(len(splitted_test_pos))
-    # print(len(splitted_test_neg))
-    # splitted_test_pos = set(splitted_test_pos)
-    # splitted_test_neg = set(splitted_test_neg)
-    # print(len(splitted_test_pos))
-    # print(len(splitted_test_neg))
-    #
-    # assert val_pos.isdisjoint(splitted_test_pos)
-    # assert val_neg.isdisjoint(splitted_test_neg)
-    # assert val_pos.isdisjoint(val_neg)
-    #
-    # val_pos = list(val_pos)
-    # val_neg = list(val_neg)
-    # splitted_test_pos = list(splitted_test_pos)
-    # splitted_test_neg = list(splitted_test_neg)
-    #
-    # odir = 'datasets/isa_easy_splits/'
-    # if not os.path.exists(odir):
-    #     os.makedirs(odir)
-    #
-    # # save the splits
-    # with open("{}.p".format(os.path.join(odir, 'isa_val_pos')), 'wb') as dump_file:
-    #     pickle.dump(val_pos, dump_file)
-    # with open("{}.p".format(os.path.join(odir, 'isa_val_neg')), 'wb') as dump_file:
-    #     pickle.dump(val_neg, dump_file)
-    # with open("{}.p".format(os.path.join(odir, 'isa_splitted_test_pos')), 'wb') as dump_file:
-    #     pickle.dump(splitted_test_pos, dump_file)
-    # with open("{}.p".format(os.path.join(odir, 'isa_splitted_test_neg')), 'wb') as dump_file:
-    #     pickle.dump(splitted_test_neg, dump_file)
-    #
-    # exit(0)
 
     print('Number of positive training samples: ', len(train_pos))
     print('Number of negative training samples: ', len(train_neg))

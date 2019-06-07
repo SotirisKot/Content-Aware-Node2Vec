@@ -19,10 +19,7 @@ def parse_args():
                         default=config.input_edgelist,
                         help='Input graph path')
 
-    parser.add_argument('--output', nargs='?', default=config.output_file,
-                        help='Embeddings path')
-
-    parser.add_argument('--dataset', nargs='?', default='part-of',
+    parser.add_argument('--dataset', nargs='?', default=config.dataset_name,
                         help='The dataset you want: {part-of, isa}')
 
     parser.add_argument('--weighted', dest='weighted', action='store_true',
@@ -221,15 +218,18 @@ def create_train_test_splits_hard(graph, num_negative_test, num_negative_train):
         original_connected_comps = nx.number_connected_components(graph)
         print('Connected components: ', original_connected_comps)
 
+        # if the graph is not directed--> convert it to directed
+        graph = graph.to_directed()
+
     np.random.shuffle(all_edges)
     # shuffle the edges and iterate over them creating the test set
     # create false edges for test and train sets..making sure the edge is not a real edge
     # and not already sampled
     # first for test_set
-    # to generate this type of negative examples we must convert the graph to directed
     print('Creating negative test samples..')
     test_false_edges = set()
     while len(test_false_edges) < num_negative_test:
+        print(len(test_false_edges))
         for node in tqdm(all_nodes):
             hop = 1
             parents = []
@@ -366,33 +366,6 @@ def create_train_test_splits_hard(graph, num_negative_test, num_negative_train):
     print("Total number of negative test samples: {}".format(len(test_false_edges)))
     print("Total number of negative train samples: {}".format(len(train_false_edges)))
 
-    print("Converting graph to undirected..")
-    graph = graph.to_undirected()
-
-    # print('Creating positive test samples..')
-    # # shuffle the edges and iterate over them creating the test set
-    # np.random.shuffle(all_edges)
-    # for edge in tqdm(all_edges):
-    #     node1 = edge[0]
-    #     node2 = edge[1]
-    #     # make sure that the graph remains connected
-    #     graph.remove_edge(node1, node2)
-    #     reachable_from_v1 = nx.connected._plain_bfs(graph, edge[0])
-    #     if edge[1] not in reachable_from_v1:
-    #         graph.add_edge(node1, node2)
-    #         counter1 += 1
-    #         continue
-    #     # remove edges from the train_edges set and add them to the test_edges set --positive samples
-    #     if len(test_edges) < num_pos_test_edges:
-    #         test_edges.add(edge)
-    #         train_edges.remove(edge)
-    #         counter2 += 1
-    #     elif len(test_edges) == num_pos_test_edges:
-    #         if not graph.is_directed():
-    #             graph.add_edge(node1, node2)
-    #         break
-    #
-    # print("Added: {} number of edges to positive test".format(counter2))
     # asserts
     assert test_false_edges.isdisjoint(all_edges_set)
     assert train_false_edges.isdisjoint(all_edges_set)
@@ -412,7 +385,6 @@ def create_train_test_splits_hard(graph, num_negative_test, num_negative_train):
     with open("{}.p".format(os.path.join(odir, '{}_test_neg'.format(dataset))), 'wb') as dump_file:
         pickle.dump(test_neg, dump_file)
 
-    nx.write_edgelist(graph, os.path.join(odir, '{}_train_graph.edgelist'.format(dataset)))
     return train_neg, test_neg
 
 
@@ -428,29 +400,34 @@ print()
 # By default the splits are 50-50.
 # NOTE: You cannot always get the percentage you want. Because you can remove a limited amount of positive edges
 # before the graph becomes disconnected.
+# NOTE: The percentage means how much of the train edges you keep.
 percent_pos = 0.5
 percent_neg = 0.5
-# the development set is created from either the train set or the test set -> be careful not to merge them when you evaluate
-percent_dev = 0.1
 #############################################################################
 
-train_pos_easy, train_neg_easy, test_pos_easy, test_neg_easy = create_train_test_splits_easy(original_graph, percent_pos, percent_neg)
+train_pos, train_neg_easy, test_pos, test_neg_easy = create_train_test_splits_easy(original_graph, percent_pos, percent_neg)
 
 print('Easy dataset created for the {} dataset.'.format(dataset))
-print('Number of positive training samples: ', len(train_pos_easy))
+print('Number of positive training samples: ', len(train_pos))
 print('Number of negative training samples: ', len(train_neg_easy))
-print('Number of positive testing samples: ', len(test_pos_easy))
+print('Number of positive testing samples: ', len(test_pos))
 print('Number of negative testing samples: ', len(test_neg_easy))
 
 #############################################################################
 # there is no point of creating positive train/test edges..because the same edges will be removed from the graph..since we keep it connected
 # sample the same amount of hard negatives with the positives: len(train_pos) == len(train_hard_neg) etc.
-num_neg_test = len(test_pos_easy)
-num_neg_train = len(train_pos_easy)
+num_neg_test = len(test_pos)
+num_neg_train = len(train_pos)
+print(num_neg_test)
+print(num_neg_train)
+
+# load the graph again
+original_graph = read_graph(file=args.input, get_connected_graph=True, remove_selfloops=True, get_directed=True)
+
 train_neg_hard, test_neg_hard = create_train_test_splits_hard(original_graph, num_neg_test, num_neg_train)
 
 print('Hard dataset created for the {} dataset.'.format(dataset))
-print('Number of positive training samples: ', len(train_pos_easy))
-print('Number of negative training samples: ', len(train_neg_hard))
-print('Number of positive testing samples: ', len(test_pos_easy))
-print('Number of negative testing samples: ', len(test_neg_hard))
+print('Number of positive training samples: ', len(train_pos))
+print('Number of negative hard training samples: ', len(train_neg_hard))
+print('Number of positive testing samples: ', len(test_pos))
+print('Number of negative hard testing samples: ', len(test_neg_hard))

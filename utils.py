@@ -16,7 +16,7 @@ class Utils(object):
         self.window_size = window_size
         if config.resume_training:
             print("Loading previous walks to continue training...")
-            self.walks = pickle.load(open(os.path.join(config.output_dir, 'isa_walks.p'), 'rb'))
+            self.walks = pickle.load(open(os.path.join(config.checkpoint_dir, '{}_walks.p'.format(config.dataset_name)), 'rb'))
         else:
             self.walks = walks
 

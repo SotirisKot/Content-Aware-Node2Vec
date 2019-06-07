@@ -15,8 +15,8 @@ max_pad = False  # you can remove the zero-padding during max pooling by setting
 hidden_size = 30
 gru_encoder = 2  # first encoder: last timesteps, second encoder: residual + max pooling, third encoder: residual + self attention
 model = 'baseline'  # models: {'baseline' , 'average', 'rnn'}
-train = False
-evaluate = True
+train = True
+evaluate = False
 evaluate_lr = True
 evaluate_cosine = True
 
@@ -28,12 +28,13 @@ write_data = False
 
 # the default dataset is the part-of.
 input_edgelist = './datasets/relation_instances_edgelists/part_of.edgelist'
+dataset_name = 'part_of'
 output_file = 'word_embeddings.emb'
-train_pos = './datasets/part_of_hard_splits/part_of_train_pos.p'
+train_pos = './datasets/part_of_easy_splits/part_of_train_pos.p'
 train_neg = './datasets/part_of_hard_splits/part_of_train_neg.p'
-test_pos = './datasets/part_of_hard_splits/part_of_test_pos.p'
+test_pos = './datasets/part_of_easy_splits/part_of_test_pos.p'
 test_neg = './datasets/part_of_hard_splits/part_of_test_neg.p'
-train_graph = './datasets/part_of_hard_splits/part_of_train_graph.edgelist'
+train_graph = './datasets/part_of_easy_splits/part_of_train_graph.edgelist'
 phrase_dic = './data_utilities/part_of/part_of_reversed_dic.p'
 checkpoint_dir = './checkpoints/'
 embeddings_dir = './embeddings/'
