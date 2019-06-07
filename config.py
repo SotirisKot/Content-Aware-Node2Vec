@@ -3,8 +3,8 @@ batch_size = 128  # don't set batch_size = 1
 neg_samples = 2
 dimensions = 30
 walk_length = 40
-num_walks = 10
-window_size = 10
+num_walks = 1
+window_size = 5
 p = 1
 q = 1
 n_layers = 1
@@ -14,9 +14,9 @@ epochs = 1
 max_pad = False  # you can remove the zero-padding during max pooling by setting it -> -1e9
 hidden_size = 30
 gru_encoder = 2  # first encoder: last timesteps, second encoder: residual + max pooling, third encoder: residual + self attention
-model = 'baseline'  # models: {'baseline' , 'average', 'rnn'}
+model = 'average'  # models: {'average', 'rnn'}
 train = True
-evaluate = False
+evaluate = True
 evaluate_lr = True
 evaluate_cosine = True
 

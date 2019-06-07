@@ -89,7 +89,6 @@ def read_graph(file, get_connected_graph=True, remove_selfloops=True, get_direct
 def learn_embeddings(walks, train_pos=None, train_neg=None, test_pos=None, test_neg=None, eval_bool=False, embeddings_file=None, checkpoint_file=None):
     if not eval_bool:
         print('Creating walk corpus..')
-        exit()
         model = Node2Vec(walks=walks, output_file=args.output, walk_length=args.walk_length,
                          embedding_dim=args.dimensions,
                          epochs=args.iter, batch_size=config.batch_size, window_size=args.window_size, neg_sample_num=config.neg_samples)

@@ -31,11 +31,9 @@ class Utils(object):
     def build_word_vocab(self, walks):
         data_vocabulary = []  # in node2vec the words are nodeids and each walk represents a sentence (in word2vec terminology)
         word2idx = {}
-        if config.model == 'rnn' or config.model == 'average':
-            word2idx['PAD'] = 0
+        word2idx['PAD'] = 0
         word2idx['UNKN'] = len(word2idx)
         for walk in tqdm(walks):
-
             for nodeid in walk:
                 data_vocabulary.append(nodeid)
                 phrase = self.phrase_dic[int(nodeid)]

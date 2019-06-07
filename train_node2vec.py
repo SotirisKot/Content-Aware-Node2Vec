@@ -258,10 +258,9 @@ class Node2Vec:
                 ###-----------
 
                 # -----------
-                if self.model_type is 'rnn' or self.model_type is 'average':
-                    phr = [phr2idx(self.utils.phrase_dic[phr_id.item()], self.word2idx) for phr_id in phr]
-                    pos_context = [phr2idx(self.utils.phrase_dic[item.item()], self.word2idx) for item in pos_context]
-                    neg_v = [phr2idx(self.utils.phrase_dic[item], self.word2idx) for item in neg_v]
+                phr = [phr2idx(self.utils.phrase_dic[phr_id.item()], self.word2idx) for phr_id in phr]
+                pos_context = [phr2idx(self.utils.phrase_dic[item.item()], self.word2idx) for item in pos_context]
+                neg_v = [phr2idx(self.utils.phrase_dic[item], self.word2idx) for item in neg_v]
                 # -----------
 
                 # --------------
@@ -289,8 +288,13 @@ class Node2Vec:
                              'idx2word': self.utils.idx2word,
                              'batch_num': batch_num,
                              'loss': loss.cpu().item()}
+
+                    if not os.path.exists(self.odir_checkpoint):
+                        os.makedirs(self.odir_checkpoint)
+
                     save_checkpoint(state,
-                                    filename=self.odir_checkpoint + 'isa_gru_checkpoint_batch_{}.pth.tar'.format(
+                                    filename=self.odir_checkpoint + '{}_checkpoint_batch_{}.pth.tar'.format(
+                                        config.dataset_name,
                                         batch_num))
                 ###
                 batch_num += 1
@@ -406,7 +410,6 @@ class Node2Vec:
             #     print('node2vec Test AUC score: ', str(test_auc))
 
         if config.evaluate_lr:
-
             test_neg = pickle.load(open(config.test_neg, 'rb'))
             train_pos_edge_embs = get_edge_embeddings(train_pos, node_embeddings, self.model_type, phrase_dic)
             train_neg_edge_embs = get_edge_embeddings(train_neg, node_embeddings, self.model_type, phrase_dic)

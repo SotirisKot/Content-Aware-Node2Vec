@@ -50,10 +50,7 @@ class Node2VecDataset(Dataset):
                     elif phr == walk[context_word_pos]:
                         continue
                     context_word_idx = walk[context_word_pos]
-                    if config.model == 'baseline':
-                        yield int(phr), int(context_word_idx)
-                    else:
-                        yield phr, context_word_idx
+                    yield phr, context_word_idx
 
     def reset_generator(self):
         del self.data_gen
