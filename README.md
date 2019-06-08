@@ -5,7 +5,7 @@ Source code and datasets of BioNLP 2019 paper: "Embedding Biomedical Ontologies 
 The folder "datasets" contains the edgelists of the two datasets, denoted Part-of and Is-a, used
 in Content-Aware Node2vec. For each dataset, exist some dictionaries in the folder data_utilities.
 For example for the Is-a dataset:
-* isa_phrase_dic.p (mapping between nodes and textual descriptors--the keys are the node_ids)
+* isa_phrase_dic.p (mapping between nodes and textual descriptors--the keys are the textual descriptors -- you must use the reversed_dic)
 * isa_phrase_vocab.p (the textual descriptors associated with each node)
 * isa_reversed_dic.p (the reversed dictionary of isa_phrase_dic.p)
 
