@@ -2,9 +2,9 @@ lr = 0.0001  # for isa..for part_of -> 0.0001 # for average 0.001
 batch_size = 128  # don't set batch_size = 1
 neg_samples = 2
 dimensions = 30
-walk_length = 10
-num_walks = 1
-window_size = 2
+walk_length = 40
+num_walks = 10
+window_size = 10
 p = 1
 q = 1
 n_layers = 1
