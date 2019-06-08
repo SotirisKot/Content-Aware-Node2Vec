@@ -615,7 +615,7 @@ def plot_attention(json_list_u, json_list_v, filename):
         html_content += '<li>'
         for word in phr_u[0].split():
             try:
-                attention = phr_u[1][word] + phr_v[1][word]
+                attention = (phr_u[1][word] + phr_v[1][word]) / 2
                 html_content += '<span style= "background-color:rgba(255, 0, 0, {0:.1f});">{1} </span>'.format(
                     attention, word)
             except KeyError:
