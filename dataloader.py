@@ -40,7 +40,6 @@ class Node2VecDataset(Dataset):
                 # for each window position
                 for w in range(-self.utils.window_size, self.utils.window_size + 1):
                     context_word_pos = idx + w
-                    # make sure not jump out sentence
                     if context_word_pos < 0:
                         break
                     elif idx + self.utils.window_size >= len(walk):
