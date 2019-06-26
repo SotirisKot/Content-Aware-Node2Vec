@@ -1,4 +1,4 @@
-lr = 0.0001  # for isa..for part_of -> 0.0001 # for average 0.001
+lr = 0.0001
 batch_size = 128  # don't set batch_size = 1
 neg_samples = 2
 dimensions = 30
