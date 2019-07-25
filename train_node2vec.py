@@ -224,7 +224,8 @@ class Node2Vec:
         dataloader = DataLoader(dataset=dataset,
                                 batch_size=self.batch_size,
                                 shuffle=False)
-
+        
+        model.train()
         for epoch in range(self.epochs):
             batch_num = 0
             batch_costs = []
@@ -246,7 +247,6 @@ class Node2Vec:
                 # last_loss = modelcheckpoint['loss']
                 print("We stopped in {} batch".format(last_batch_num))
             #
-            model.train()
             iterator = tqdm(dataloader)
             for sample in iterator:
 
