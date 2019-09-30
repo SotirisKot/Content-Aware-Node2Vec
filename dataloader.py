@@ -20,7 +20,7 @@ class Node2VecDataset(Dataset):
 
         if config.write_data:
             print('Writing data in disk if we need to resume training...')
-            with open("{}.p".format(os.path.join(config.checkpoint_dir, '{}_walks.p'.format(config.dataset_name))), 'wb') as dump_file:
+            with open("{}".format(os.path.join(config.checkpoint_dir, '{}_walks.p'.format(config.dataset_name))), 'wb') as dump_file:
                 pickle.dump(self.data, dump_file)
             print('Done writing data...')
 
