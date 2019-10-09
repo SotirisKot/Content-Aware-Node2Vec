@@ -38,7 +38,7 @@ class Node2VecDataset(Dataset):
         for walk in self.data:
             for idx, phr in enumerate(walk):
                 # for each window position
-                for w in range(0, self.utils.window_size + 1):
+                for w in range(-self.utils.window_size, self.utils.window_size + 1):
                     context_word_pos = idx + w
                     if context_word_pos < 0:
                         break
